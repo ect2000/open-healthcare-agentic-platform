@@ -48,15 +48,20 @@ The platform will integrate four authoritative, publicly available healthcare re
   - `healthcare-agents` CLI with `--version` and `health`/`status` commands.
   - Automated testing (pytest, coverage), Ruff linting/formatting, mypy strict typing.
   - GitHub Actions CI workflow for Python 3.12.
-- [x] **Milestone M2 — Gemma 4 + Ollama Local Serving** *(Current)*:
+- [x] **Milestone M2 — Gemma 4 + Ollama Local Serving**:
   - Local model runtime integration via Ollama (`gemma4:e2b`).
   - Unified model adapter abstraction (`src/healthcare_agents/models/`) and streaming prompt interface.
   - CLI model subcommands: `healthcare-agents model status` and `healthcare-agents model chat`.
   - Offline unit tests and opt-in live local inference tests with 93%+ coverage.
-- [ ] **Milestone M3 — Model Context Protocol (MCP) Healthcare Tools**:
+- [x] **Milestone M3 — LangGraph Multi-Agent Orchestration** *(Current)*:
+  - Typed multi-agent discovery workflow using LangGraph (`src/healthcare_agents/workflows/`).
+  - Five core agent modules: Planner, Provider Retrieval, Research Evidence, Deterministic Validator, and Answer Synthesis.
+  - Deterministic Python verification for deduplication, NPI validity, and claim grounding.
+  - Deterministic synthetic fixtures for provider & evidence retrieval (preparing interfaces for M4 live connectors).
+  - CLI discovery command: `healthcare-agents search --query "..." [--verbose]`.
+  - Comprehensive offline test suite (96.14% coverage) and opt-in real Gemma 4 LangGraph tests.
+- [ ] **Milestone M4 — Model Context Protocol (MCP) Healthcare Data Tools**:
   - Connectors and MCP servers for NPPES, PubMed, CMS Provider Data, and MedlinePlus.
-- [ ] **Milestone M4 — LangGraph Multi-Agent Workflows**:
-  - Specialized agent roles (Supervisor, Literature Reviewer, Provider Finder, Fact Checker).
 - [ ] **Milestone M5 — Streamlit UI & FastAPI Gateway**:
   - Interactive web interface for clinicians and patients, REST and streaming APIs.
 - [ ] **Milestone M6 — Docker, Kubernetes, vLLM & OpenTelemetry**:
@@ -64,11 +69,22 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ---
 
-## 5. Local Developer Setup & Installation
+## 5. Workflow Architecture (Milestone M3)
+
+The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents:
+
+![LangGraph Healthcare Workflow](docs/images/m3_workflow.svg)
+
+> **Note on Retrieval Data**: In Milestone M3, provider and research evidence retrieval uses deterministic synthetic fixtures to validate multi-agent coordination without external network dependencies. Live public healthcare API integrations (NPPES, PubMed, CMS, MedlinePlus) are implemented in Milestone M4.
+
+---
+
+## 6. Local Developer Setup & Installation
 
 ### Requirements
 - Python 3.12 or newer
 - Git
+- Ollama with `gemma4:e2b` installed
 
 ### Installation
 Clone the repository and set up a virtual environment:
@@ -91,9 +107,9 @@ cp .env.example .env
 
 ---
 
-## 6. CLI Smoke Test
+## 7. CLI Usage & Agent Discovery
 
-Verify the installed CLI tool:
+Verify the installed CLI tool and run multi-agent discovery:
 
 ```bash
 # Check version
@@ -102,17 +118,28 @@ healthcare-agents --version
 # Check configuration health status
 healthcare-agents health
 
-# Detailed configuration output
-healthcare-agents health --verbose
+# Check local model connection (Ollama + Gemma 4)
+healthcare-agents model status
+
+# Execute LangGraph multi-agent discovery workflow
+healthcare-agents search --query "Find pediatric dentists in Houston"
+
+# Detailed stage-by-stage multi-agent progression
+healthcare-agents search --query "Find pediatric dentists in Houston" --verbose
 ```
 
 ---
 
-## 7. Running Automated Tests & Code Quality
+## 8. Running Automated Tests & Code Quality
 
 Run tests offline with code coverage:
 ```bash
 pytest
+```
+
+Run with opt-in live Ollama + Gemma 4 workflow tests:
+```bash
+HEALTHCARE_AGENTS_LIVE_TESTS=1 pytest
 ```
 
 Run linting and formatting verification:
@@ -133,20 +160,25 @@ python -m build
 
 ---
 
-## 8. Current Implemented Functionality vs. Future Status
+## 9. Current Implemented Functionality vs. Future Status
 
-- **Currently Implemented (M1)**:
-  - Complete project foundation, packaging, CLI commands, and environment validation.
-  - Full automated offline test suite and CI automation.
-  - Architectural blueprint and target specifications.
-- **Future Milestones (M2–M6)**:
-  - LLM inference, LangGraph workflows, MCP data connectors, and web interfaces will be implemented in subsequent phases.
+- **Currently Implemented (M1–M3)**:
+  - Packaging, configuration, environment validation, CLI commands (`health`, `model`, `search`).
+  - Local Gemma 4 serving via Ollama adapter (`src/healthcare_agents/models/`).
+  - LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/`).
+  - Five specialized agent components (Planner, Provider, Evidence, Validator, Answer).
+  - Deterministic Python verification and synthetic provider/evidence retrieval fixtures.
+  - Comprehensive offline and live integration test coverage (96%+).
+- **Future Milestones (M4–M6)**:
+  - Live MCP healthcare data connectors (NPPES, PubMed, CMS, MedlinePlus) in M4.
+  - Streamlit interactive UI and FastAPI gateway in M5.
+  - Production containerization (Docker, Kubernetes, vLLM, Helm) and OpenTelemetry in M6.
 
 For detailed architecture details, refer to [docs/architecture/README.md](docs/architecture/README.md).
 
 ---
 
-## 9. Non-Clinical / Research Disclaimer
+## 10. Non-Clinical / Research Disclaimer
 
 > **IMPORTANT DISCLAIMER**: This software is designed exclusively for research, education, and informational discovery. It is **NOT** a medical device, diagnostic tool, or clinical decision support system. It is not intended to diagnose, cure, mitigate, treat, or prevent any medical condition. Always consult a qualified healthcare professional regarding any medical diagnosis or treatment options.
 

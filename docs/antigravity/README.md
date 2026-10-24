@@ -10,8 +10,8 @@ This directory maintains the historical documentation, execution records, implem
 |:---|:---|:---|:---|
 | [M01-foundation](./M01-foundation/) | `v0.1.0-m01` | Repository Foundation, Python 3.12 Packaging, CLI, Tests & CI | Complete |
 | [M02-gemma-ollama](./M02-gemma-ollama/) | `v0.2.0-m02` | Local Gemma 4 Serving via Ollama & Model Adapter Interface | Complete |
-| M03-mcp-tools | `v0.3.0-m03` | Model Context Protocol (MCP) Healthcare Data Tools | Planned |
-| M04-langgraph-agents | `v0.4.0-m04` | LangGraph Multi-Agent Workflows & Evidence Grounding | Planned |
+| [M03-langgraph-agents](./M03-langgraph-agents/) | `v0.3.0-m03` | LangGraph Multi-Agent Orchestration & Grounded Discovery | Complete |
+| M04-mcp-tools | `v0.4.0-m04` | Model Context Protocol (MCP) Healthcare Data Tools | Planned |
 | M05-ui-gateway | `v0.5.0-m05` | Streamlit User Interface & FastAPI Gateway | Planned |
 | M06-k8s-observability | `v0.6.0-m06` | Docker, Kubernetes, Helm, vLLM & OpenTelemetry | Planned |
 

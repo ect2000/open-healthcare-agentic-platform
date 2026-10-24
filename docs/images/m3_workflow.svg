@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 340" width="100%" height="100%">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="agentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="valGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="ansGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feOffset dx="0" dy="4"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.15"/></feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#f8fafc" rx="12"/>
+  <rect width="100%" height="100%" fill="none" stroke="#e2e8f0" stroke-width="2" rx="12"/>
+
+  <!-- Title & Subtitle -->
+  <text x="30" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">LangGraph Healthcare Discovery Workflow (Milestone M3)</text>
+  <text x="30" y="60" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">Coordinating Planning, Deterministic Retrieval Fixtures, Rule-Based Validation & Grounded Answer Synthesis</text>
+
+  <!-- Node: User Query -->
+  <g transform="translate(30, 110)" filter="url(#shadow)">
+    <rect width="120" height="90" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <rect width="120" height="8" rx="4" fill="#64748b"/>
+    <text x="60" y="42" font-family="sans-serif" font-size="13" font-weight="700" fill="#1e293b" text-anchor="middle">User Query</text>
+    <text x="60" y="62" font-family="sans-serif" font-size="10" fill="#64748b" text-anchor="middle">CLI / API input</text>
+    <text x="60" y="78" font-family="sans-serif" font-size="9" fill="#0284c7" text-anchor="middle">Intent &amp; Topic</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="150" y1="155" x2="185" y2="155" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node: Planner Agent -->
+  <g transform="translate(190, 100)" filter="url(#shadow)">
+    <rect width="145" height="110" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+    <rect width="145" height="8" rx="4" fill="url(#primaryGrad)"/>
+    <text x="72" y="35" font-family="sans-serif" font-size="13" font-weight="700" fill="#1e3a8a" text-anchor="middle">1. Planner Agent</text>
+    <text x="72" y="55" font-family="sans-serif" font-size="10" font-weight="600" fill="#3b82f6" text-anchor="middle">Gemma 4 (Ollama)</text>
+    <text x="72" y="75" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Intent Extraction</text>
+    <text x="72" y="90" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Specialty &amp; Location</text>
+    <text x="72" y="103" font-family="sans-serif" font-size="8.5" fill="#94a3b8" text-anchor="middle">Structured Search Plan</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="335" y1="155" x2="370" y2="155" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Subgraph: Retrieval Agents (Parallel Stage) -->
+  <g transform="translate(375, 80)">
+    <rect width="170" height="150" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="85" y="20" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#0f766e" text-anchor="middle">2. Retrieval Stage (Fixtures)</text>
+
+    <!-- Provider Box -->
+    <rect x="10" y="30" width="150" height="48" rx="6" fill="#ffffff" stroke="#14b8a6" stroke-width="1.5"/>
+    <text x="85" y="49" font-family="sans-serif" font-size="11" font-weight="700" fill="#0f766e" text-anchor="middle">Provider Agent</text>
+    <text x="85" y="66" font-family="sans-serif" font-size="9" fill="#64748b" text-anchor="middle">NPPES / CMS Mock Fixtures</text>
+
+    <!-- Evidence Box -->
+    <rect x="10" y="88" width="150" height="48" rx="6" fill="#ffffff" stroke="#14b8a6" stroke-width="1.5"/>
+    <text x="85" y="107" font-family="sans-serif" font-size="11" font-weight="700" fill="#0f766e" text-anchor="middle">Evidence Agent</text>
+    <text x="85" y="124" font-family="sans-serif" font-size="9" fill="#64748b" text-anchor="middle">PubMed / MedlinePlus Mock</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="545" y1="155" x2="580" y2="155" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node: Validator Component -->
+  <g transform="translate(585, 100)" filter="url(#shadow)">
+    <rect width="140" height="110" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+    <rect width="140" height="8" rx="4" fill="url(#valGrad)"/>
+    <text x="70" y="35" font-family="sans-serif" font-size="13" font-weight="700" fill="#b45309" text-anchor="middle">3. Validator</text>
+    <text x="70" y="55" font-family="sans-serif" font-size="10" font-weight="600" fill="#d97706" text-anchor="middle">Deterministic Python</text>
+    <text x="70" y="75" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Deduplication &amp; NPI</text>
+    <text x="70" y="90" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Provenance &amp; Claims</text>
+    <text x="70" y="103" font-family="sans-serif" font-size="8.5" fill="#94a3b8" text-anchor="middle">Zero Hallucinated Trust</text>
+  </g>
+
+  <!-- Arrow 4 -->
+  <line x1="725" y1="155" x2="760" y2="155" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node: Answer Agent & Result -->
+  <g transform="translate(765, 95)" filter="url(#shadow)">
+    <rect width="130" height="120" rx="8" fill="#ffffff" stroke="#6366f1" stroke-width="2"/>
+    <rect width="130" height="8" rx="4" fill="url(#ansGrad)"/>
+    <text x="65" y="35" font-family="sans-serif" font-size="13" font-weight="700" fill="#4338ca" text-anchor="middle">4. Answer Agent</text>
+    <text x="65" y="55" font-family="sans-serif" font-size="10" font-weight="600" fill="#6366f1" text-anchor="middle">Gemma 4 Synthesis</text>
+    <text x="65" y="75" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Grounded Synthesis</text>
+    <text x="65" y="90" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Explicit Citations</text>
+    <text x="65" y="108" font-family="sans-serif" font-size="8.5" fill="#10b981" font-weight="600" text-anchor="middle">Final Validated Output</text>
+  </g>
+
+  <!-- Footer note -->
+  <g transform="translate(30, 275)">
+    <rect width="860" height="42" rx="6" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1"/>
+    <text x="20" y="26" font-family="sans-serif" font-size="11" fill="#0369a1" font-weight="500">
+      * Note: M3 establishes typed LangGraph agent choreography, deterministic verification, and grounded Gemma 4 synthesis using synthetic fixtures. Live API connectors (NPPES, PubMed, CMS, MedlinePlus) are integrated in M4.
+    </text>
+  </g>
+</svg>

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "healthcare-agents"
-version = "0.1.0"
+version = "0.3.0"
 description = "Vendor-neutral, open-source, evidence-grounded healthcare search and agentic AI platform"
 readme = "README.md"
 license = "Apache-2.0"
@@ -22,7 +22,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
-dependencies = []
+dependencies = [
+    "langgraph>=0.2.0",
+]
 
 [project.optional-dependencies]
 dev = [

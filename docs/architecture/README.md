@@ -1,7 +1,7 @@
 # Target Architecture: Open Healthcare Agentic Platform
 
 > **Status Notice:** This document describes the **TARGET ARCHITECTURE** for the platform.  
-> As of Milestone M2 (Gemma 4 + Ollama Local Serving), the baseline Python packaging, CLI, configuration scaffolding, CI infrastructure, and local Gemma 4 model adapter (`src/healthcare_agents/models/`) are active. Multi-agent orchestration, MCP servers, and Kubernetes deployments are planned for upcoming milestones.
+> As of Milestone M3 (LangGraph Multi-Agent Orchestration), the baseline Python packaging, CLI, configuration scaffolding, local Gemma 4 model adapter (`src/healthcare_agents/models/`), and typed LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/` and `src/healthcare_agents/agents/`) with synthetic retrieval fixtures are active. Live MCP data connectors (NPPES, PubMed, CMS, MedlinePlus) and Kubernetes deployments are planned for upcoming milestones (M4–M6).
 
 ---
 

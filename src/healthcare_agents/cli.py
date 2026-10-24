@@ -16,6 +16,7 @@ from healthcare_agents.models import (
     OllamaAdapter,
     get_model_adapter,
 )
+from healthcare_agents.workflows import run_healthcare_workflow
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -78,6 +79,24 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument(
         "--system",
         help="Optional system instruction for the model.",
+    )
+
+    # healthcare-agents search command (Milestone M3)
+    search_parser = subparsers.add_parser(
+        "search",
+        help="Run multi-agent healthcare discovery workflow with LangGraph.",
+    )
+    search_parser.add_argument(
+        "--query",
+        "-q",
+        required=True,
+        help="Healthcare search query (e.g., 'Find pediatric dentists in Houston').",
+    )
+    search_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Display detailed agent planning, retrieval, and validation stages.",
     )
 
     return parser
@@ -209,6 +228,77 @@ def handle_model_chat(prompt: str, stream: bool = False, system: str | None = No
         return 1
 
 
+def handle_search(query: str, verbose: bool = False) -> int:
+    """Execute the multi-agent LangGraph healthcare discovery workflow."""
+    try:
+        settings = get_settings()
+    except ConfigurationError as err:
+        sys.stderr.write(f"Configuration error: {err}\n")
+        return 1
+
+    adapter = get_model_adapter(
+        provider=settings.model_provider,
+        base_url=settings.ollama_base_url,
+        model_name=settings.model_name,
+        timeout_seconds=settings.model_timeout_seconds,
+    )
+
+    sys.stdout.write("==================================================\n")
+    sys.stdout.write("  HEALTHCARE MULTI-AGENT WORKFLOW (LangGraph)     \n")
+    sys.stdout.write("==================================================\n")
+    sys.stdout.write(f"Query: {query}\n\n")
+
+    try:
+        state = run_healthcare_workflow(query=query, model_adapter=adapter)
+    except Exception as err:
+        sys.stderr.write(f"Workflow execution failure: {err}\n")
+        return 1
+
+    plan = state.get("search_plan", {})
+    providers = state.get("provider_candidates", [])
+    evidence = state.get("clinical_evidence", []) + state.get("patient_education_evidence", [])
+    validation = state.get("validation_results", {})
+    final_answer = state.get("final_answer", "")
+
+    if verbose:
+        sys.stdout.write("--- [Stage 1: Planner Agent] ---\n")
+        sys.stdout.write(f"Specialty: {plan.get('specialty') or 'N/A'}\n")
+        sys.stdout.write(f"Location:  {plan.get('city') or 'N/A'}, {plan.get('state') or 'N/A'}\n")
+        sys.stdout.write(f"Topics:    {', '.join(plan.get('evidence_topics', []))}\n\n")
+
+        sys.stdout.write("--- [Stage 2: Provider Retrieval (Fixtures)] ---\n")
+        for p in providers:
+            sys.stdout.write(
+                f"- {p.name} | {p.specialty} | {p.facility_name} "
+                f"({p.city}, {p.state}) [NPI: {p.npi}]\n"
+            )
+        sys.stdout.write("\n")
+
+        sys.stdout.write("--- [Stage 3: Evidence Retrieval (Fixtures)] ---\n")
+        for e in evidence:
+            sys.stdout.write(f"- [{e.source}] {e.title} ({e.year})\n")
+        sys.stdout.write("\n")
+
+        sys.stdout.write("--- [Stage 4: Deterministic Validation] ---\n")
+        valid_str = "VALID" if validation.get("is_valid") else "INVALID"
+        sys.stdout.write(f"Status:             {valid_str}\n")
+        sys.stdout.write(f"Duplicates Checked: {validation.get('duplicate_providers_found', 0)}\n")
+        sys.stdout.write(f"Provenance OK:      {validation.get('provenance_verified')}\n\n")
+
+    sys.stdout.write("--- [Stage 5: Synthesized Discovery Result] ---\n")
+    sys.stdout.write(f"{final_answer}\n\n")
+
+    citations = state.get("citations", [])
+    if citations:
+        sys.stdout.write("--- [Citations & Source Provenance] ---\n")
+        for c in citations:
+            sys.stdout.write(f"- {c}\n")
+        sys.stdout.write("\n")
+
+    sys.stdout.write("[Notice: Data retrieved from synthetic test fixtures for demonstration.]\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
@@ -228,6 +318,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         parser.parse_args(["model", "--help"])
         return 0
+
+    if args.command == "search":
+        return handle_search(
+            query=args.query,
+            verbose=getattr(args, "verbose", False),
+        )
 
     parser.print_help()
     return 0
