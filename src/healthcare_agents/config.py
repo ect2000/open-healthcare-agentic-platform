@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 _VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 _VALID_ENVIRONMENTS = {"development", "staging", "production", "test"}
+_VALID_MODEL_PROVIDERS = {"ollama", "vllm"}
 
 
 class ConfigurationError(ValueError):
@@ -28,6 +29,7 @@ class Settings:
     model_provider: str
     model_name: str
     ollama_base_url: str
+    model_timeout_seconds: float
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -57,14 +59,32 @@ class Settings:
                 f"{', '.join(sorted(_VALID_LOG_LEVELS))}."
             )
 
-        model_provider = source.get("MODEL_PROVIDER", "ollama").strip()
-        model_name = source.get("MODEL_NAME", "gemma:4b").strip()
-        ollama_base_url = source.get("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+        model_provider = source.get("MODEL_PROVIDER", "ollama").strip().lower()
+        if model_provider not in _VALID_MODEL_PROVIDERS:
+            raise ConfigurationError(
+                f"Invalid MODEL_PROVIDER '{model_provider}'. Expected one of: "
+                f"{', '.join(sorted(_VALID_MODEL_PROVIDERS))}."
+            )
 
+        model_name = source.get("MODEL_NAME", "gemma4:e2b").strip()
+        if not model_name:
+            raise ConfigurationError("MODEL_NAME must not be empty.")
+
+        ollama_base_url = source.get("OLLAMA_BASE_URL", "http://localhost:11434").strip()
         if not ollama_base_url.startswith(("http://", "https://")):
             raise ConfigurationError(
                 f"Invalid OLLAMA_BASE_URL '{ollama_base_url}'. Must begin with http:// or https://."
             )
+
+        raw_timeout = source.get("MODEL_TIMEOUT_SECONDS", "120")
+        try:
+            model_timeout_seconds = float(raw_timeout)
+            if model_timeout_seconds <= 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid MODEL_TIMEOUT_SECONDS '{raw_timeout}'. Must be a positive number."
+            ) from None
 
         return cls(
             app_name=app_name,
@@ -73,6 +93,7 @@ class Settings:
             model_provider=model_provider,
             model_name=model_name,
             ollama_base_url=ollama_base_url,
+            model_timeout_seconds=model_timeout_seconds,
         )
 
 

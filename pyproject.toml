@@ -39,6 +39,9 @@ healthcare-agents = "healthcare_agents.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/healthcare_agents"]
 
+[tool.hatch.build.targets.sdist]
+include = ["src/healthcare_agents"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100

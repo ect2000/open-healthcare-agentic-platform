@@ -33,7 +33,7 @@ secrets/
 # Runtime and model artifacts
 logs/
 *.log
-models/
+/models/
 checkpoints/
 *.gguf
 *.safetensors

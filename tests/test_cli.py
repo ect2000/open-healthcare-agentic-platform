@@ -41,7 +41,7 @@ def test_cli_health_verbose(capsys: pytest.CaptureFixture[str]) -> None:
     assert exit_code == 0
     captured = capsys.readouterr()
     assert "App Name: open-healthcare-agentic-platform" in captured.out
-    assert "Configured Model: gemma:4b" in captured.out
+    assert "Configured Model: gemma4:e2b" in captured.out
     assert "Ollama URL: http://localhost:11434" in captured.out
 
 

@@ -42,15 +42,17 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ## 4. Six-Phase Milestone Roadmap
 
-- [x] **Milestone M1 — Repository Foundation, Python & CI** *(Current)*:
+- [x] **Milestone M1 — Repository Foundation, Python & CI**:
   - PEP 517 packaging with `src/` layout, Hatchling backend.
   - Safe configuration loader and environment variable scaffolding.
   - `healthcare-agents` CLI with `--version` and `health`/`status` commands.
   - Automated testing (pytest, coverage), Ruff linting/formatting, mypy strict typing.
   - GitHub Actions CI workflow for Python 3.12.
-- [ ] **Milestone M2 — Gemma 4 + Ollama Local Serving**:
-  - Local model runtime integration via Ollama.
-  - Unified model adapter abstraction and streaming prompt interface.
+- [x] **Milestone M2 — Gemma 4 + Ollama Local Serving** *(Current)*:
+  - Local model runtime integration via Ollama (`gemma4:e2b`).
+  - Unified model adapter abstraction (`src/healthcare_agents/models/`) and streaming prompt interface.
+  - CLI model subcommands: `healthcare-agents model status` and `healthcare-agents model chat`.
+  - Offline unit tests and opt-in live local inference tests with 93%+ coverage.
 - [ ] **Milestone M3 — Model Context Protocol (MCP) Healthcare Tools**:
   - Connectors and MCP servers for NPPES, PubMed, CMS Provider Data, and MedlinePlus.
 - [ ] **Milestone M4 — LangGraph Multi-Agent Workflows**:

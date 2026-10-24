@@ -1,7 +1,7 @@
 # Target Architecture: Open Healthcare Agentic Platform
 
 > **Status Notice:** This document describes the **TARGET ARCHITECTURE** for the platform.  
-> As of Milestone M1 (Foundation), only the baseline Python packaging, CLI, configuration scaffolding, and CI infrastructure are active. AI reasoning, MCP servers, vector databases, and container orchestrations are planned for upcoming milestones.
+> As of Milestone M2 (Gemma 4 + Ollama Local Serving), the baseline Python packaging, CLI, configuration scaffolding, CI infrastructure, and local Gemma 4 model adapter (`src/healthcare_agents/models/`) are active. Multi-agent orchestration, MCP servers, and Kubernetes deployments are planned for upcoming milestones.
 
 ---
 

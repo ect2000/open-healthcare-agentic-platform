@@ -12,8 +12,9 @@ def test_settings_default_values() -> None:
     assert settings.environment == "development"
     assert settings.log_level == "INFO"
     assert settings.model_provider == "ollama"
-    assert settings.model_name == "gemma:4b"
+    assert settings.model_name == "gemma4:e2b"
     assert settings.ollama_base_url == "http://localhost:11434"
+    assert settings.model_timeout_seconds == 120.0
 
 
 def test_settings_environment_overrides() -> None:
@@ -25,6 +26,7 @@ def test_settings_environment_overrides() -> None:
         "MODEL_PROVIDER": "vllm",
         "MODEL_NAME": "custom-gemma:7b",
         "OLLAMA_BASE_URL": "https://ollama.internal:11434",
+        "MODEL_TIMEOUT_SECONDS": "60.5",
     }
     settings = Settings.from_env(env)
     assert settings.app_name == "custom-agent-system"
@@ -33,6 +35,7 @@ def test_settings_environment_overrides() -> None:
     assert settings.model_provider == "vllm"
     assert settings.model_name == "custom-gemma:7b"
     assert settings.ollama_base_url == "https://ollama.internal:11434"
+    assert settings.model_timeout_seconds == 60.5
 
 
 def test_get_settings_helper() -> None:
@@ -59,7 +62,28 @@ def test_settings_invalid_log_level_error() -> None:
         Settings.from_env({"HEALTHCARE_AGENTS_LOG_LEVEL": "TRACE"})
 
 
+def test_settings_invalid_provider_error() -> None:
+    """Verify invalid model provider raises ConfigurationError."""
+    with pytest.raises(ConfigurationError, match="Invalid MODEL_PROVIDER"):
+        Settings.from_env({"MODEL_PROVIDER": "cloud-ai"})
+
+
+def test_settings_empty_model_name_error() -> None:
+    """Verify empty model name raises ConfigurationError."""
+    with pytest.raises(ConfigurationError, match="MODEL_NAME must not be empty"):
+        Settings.from_env({"MODEL_NAME": "   "})
+
+
 def test_settings_invalid_url_error() -> None:
     """Verify invalid URL format raises ConfigurationError."""
     with pytest.raises(ConfigurationError, match="Invalid OLLAMA_BASE_URL"):
         Settings.from_env({"OLLAMA_BASE_URL": "ftp://localhost:11434"})
+
+
+def test_settings_invalid_timeout_error() -> None:
+    """Verify negative or non-numeric timeout raises ConfigurationError."""
+    with pytest.raises(ConfigurationError, match="Invalid MODEL_TIMEOUT_SECONDS"):
+        Settings.from_env({"MODEL_TIMEOUT_SECONDS": "-10"})
+
+    with pytest.raises(ConfigurationError, match="Invalid MODEL_TIMEOUT_SECONDS"):
+        Settings.from_env({"MODEL_TIMEOUT_SECONDS": "not_a_number"})
