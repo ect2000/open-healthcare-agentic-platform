@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "feature/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+
+      - name: Run Ruff lint check
+        run: |
+          ruff check .
+
+      - name: Run Ruff format check
+        run: |
+          ruff format --check .
+
+      - name: Run mypy type check
+        run: |
+          mypy src tests
+
+      - name: Run pytest with coverage
+        run: |
+          pytest
+
+      - name: Build wheel and source distribution
+        run: |
+          python -m build
+
+      - name: Verify package installation and import
+        run: |
+          python -m pip install dist/*.whl
+          healthcare-agents --version
+          healthcare-agents health
+          python -c "import healthcare_agents; print('Imported version:', healthcare_agents.__version__)"

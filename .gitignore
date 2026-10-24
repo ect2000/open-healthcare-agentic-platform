@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# IDE and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Runtime and model artifacts
+logs/
+*.log
+models/
+checkpoints/
+*.gguf
+*.safetensors
