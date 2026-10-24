@@ -58,15 +58,16 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Five core agent modules: Planner, Provider Retrieval, Research Evidence, Deterministic Validator, and Answer Synthesis.
   - Deterministic Python verification for deduplication, NPI validity, and claim grounding.
   - Comprehensive offline test suite and opt-in real Gemma 4 LangGraph tests.
-- [x] **Milestone M4A — Live NPPES Provider Discovery** *(Current)*:
+- [x] **Milestone M4A — Live NPPES Provider Discovery**:
   - Real public CMS NPPES NPI Registry API version 2.1 client (`src/healthcare_agents/retrieval/nppes_client.py`).
   - Real provider search by specialty, taxonomy description, city, state, and direct 10-digit NPI lookup.
-  - Typed provider normalization capturing NPI-1/NPI-2 entity types, practice vs mailing addresses, phone numbers.
-  - Configurable retrieval mode (`RETRIEVAL_MODE=live` or `RETRIEVAL_MODE=fixture`).
-  - Strict 10-digit NPI format verification and source provenance enforcement in the deterministic validator.
-  - CLI discovery display showing real NPIs, practice locations, telephone, and retrieval timestamps.
-- [ ] **Milestone M4B — Live PubMed Biomedical Research Literature Discovery**:
-  - Real PubMed / NCBI Entrez API client for biomedical studies and clinical abstracts.
+  - Practice location validation against LOCATION addresses and relevant provider taxonomy filtering.
+- [x] **Milestone M4B — Live PubMed Biomedical Research Literature Discovery** *(Current)*:
+  - Official NCBI Entrez E-utilities client (`src/healthcare_agents/retrieval/pubmed_client.py`) implementing ESearch and EFetch.
+  - Live biomedical literature retrieval by query topic, full abstracts, authors, journals, DOIs, and PubMed URLs.
+  - Rate-limiting (3 req/s without key, 10 req/s with key) and exponential backoff retry.
+  - Deterministic validation of PMID format, PubMed URLs, duplicate detection, and research independence guardrails.
+  - Grounded Gemma 4 synthesis citing real NPPES providers and real PubMed literature.
 - [ ] **Milestone M4C — CMS Provider Data Quality Metrics**:
   - CMS clinician ratings, hospital performance, and facility metrics.
 - [ ] **Milestone M4D — MedlinePlus Consumer Health & Drug Information**:
@@ -82,13 +83,13 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ## 5. Workflow Architecture
 
-### Milestone M4A — Live CMS NPPES Registry Workflow (Current)
+### Milestone M4B — Live NPPES Provider & PubMed Research Workflow (Current)
 
-The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider retrieval:
+The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider discovery and live NCBI PubMed research literature retrieval:
 
-![LangGraph Healthcare Workflow](docs/images/m4a_workflow.svg)
+![M4B LangGraph Healthcare Workflow](docs/images/m4b_workflow.png)
 
-> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Research literature and patient education evidence remain simulated fixtures for M4A and will transition to live APIs in M4B–M4D.
+> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Biomedical research citations retrieved from NCBI PubMed establish that a publication exists in the scientific literature, not that its conclusions are universally valid or applicable to an individual patient. Patient education evidence (MedlinePlus) remains simulated fixtures for M4B and will transition to live APIs in M4D.
 
 ### Milestone M3 — Multi-Agent LangGraph Core Architecture (Synthetic Fixtures)
 

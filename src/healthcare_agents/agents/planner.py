@@ -97,9 +97,17 @@ def plan_query(
             plan["state"] = plan["state"] or "TX"
 
     if not plan["evidence_topics"]:
+        extracted_topics: list[str] = []
+        if "dental anxiety" in lower_q or "anxiety" in lower_q:
+            extracted_topics.append("dental anxiety")
         if plan["specialty"]:
-            plan["evidence_topics"].append(plan["specialty"])
-        plan["evidence_topics"].append(query)
+            extracted_topics.append(plan["specialty"])
+        elif "pediatric" in lower_q:
+            extracted_topics.append("pediatrics")
+
+        if not extracted_topics:
+            extracted_topics.append(query)
+        plan["evidence_topics"] = extracted_topics
 
     metadata["planner_completed"] = True
     return {

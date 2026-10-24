@@ -14,8 +14,12 @@ from healthcare_agents.retrieval.base import (
     BaseEvidenceRetriever,
     BaseProviderRetriever,
 )
-from healthcare_agents.retrieval.fixtures import FixtureProviderRetriever
+from healthcare_agents.retrieval.fixtures import (
+    FixtureEvidenceRetriever,
+    FixtureProviderRetriever,
+)
 from healthcare_agents.retrieval.nppes_client import NPPESProviderRetriever
+from healthcare_agents.retrieval.pubmed_client import PubMedEvidenceRetriever
 from healthcare_agents.workflows.state import HealthcareWorkflowState
 
 
@@ -34,6 +38,24 @@ def get_default_provider_retriever() -> BaseProviderRetriever:
     return FixtureProviderRetriever()
 
 
+def get_default_evidence_retriever() -> BaseEvidenceRetriever:
+    """Resolve evidence retriever based on application settings."""
+    try:
+        settings = get_settings()
+        if settings.retrieval_mode == "live":
+            return PubMedEvidenceRetriever(
+                base_url=settings.pubmed_api_url,
+                timeout_seconds=settings.pubmed_timeout_seconds,
+                max_retries=settings.pubmed_max_retries,
+                api_key=settings.ncbi_api_key,
+                email=settings.ncbi_email,
+                tool=settings.ncbi_tool,
+            )
+    except Exception:
+        pass
+    return FixtureEvidenceRetriever()
+
+
 def create_healthcare_graph(
     model_adapter: BaseModelAdapter | None = None,
     provider_retriever: BaseProviderRetriever | None = None,
@@ -50,6 +72,9 @@ def create_healthcare_graph(
     resolved_provider_retriever = (
         provider_retriever if provider_retriever is not None else get_default_provider_retriever()
     )
+    resolved_evidence_retriever = (
+        evidence_retriever if evidence_retriever is not None else get_default_evidence_retriever()
+    )
 
     # Node wrappers injecting dependencies
     def planner_node(state: HealthcareWorkflowState) -> dict[str, Any]:
@@ -59,7 +84,7 @@ def create_healthcare_graph(
         return retrieve_providers(state=state, provider_retriever=resolved_provider_retriever)
 
     def evidence_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return retrieve_evidence(state=state, evidence_retriever=evidence_retriever)
+        return retrieve_evidence(state=state, evidence_retriever=resolved_evidence_retriever)
 
     def validation_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         return validate_records(state=state)

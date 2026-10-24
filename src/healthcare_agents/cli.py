@@ -284,9 +284,20 @@ def handle_search(query: str, verbose: bool = False) -> int:
             sys.stdout.write("(No provider candidates retrieved)\n")
         sys.stdout.write("\n")
 
-        sys.stdout.write("--- [Stage 3: Evidence Retrieval (Simulated Fixtures)] ---\n")
-        for e in evidence:
-            sys.stdout.write(f"- [{e.source}] {e.title} ({e.year})\n")
+        ev_retriever = state.get("execution_metadata", {}).get(
+            "evidence_retriever", "EvidenceRetriever"
+        )
+        sys.stdout.write(f"--- [Stage 3: Evidence Retrieval ({ev_retriever})] ---\n")
+        if evidence:
+            for e in evidence:
+                status_str = "FIXTURE" if e.is_synthetic else "LIVE PUBMED"
+                url_str = f" | URL: {e.pubmed_url}" if e.pubmed_url else ""
+                auth_str = f" | Authors: {', '.join(e.authors[:2])}" if e.authors else ""
+                sys.stdout.write(
+                    f"- [{status_str}] {e.title} ({e.year}) [{e.citation_ref}]{auth_str}{url_str}\n"
+                )
+        else:
+            sys.stdout.write("(No clinical or educational evidence records retrieved)\n")
         sys.stdout.write("\n")
 
         sys.stdout.write("--- [Stage 4: Deterministic Validation] ---\n")
@@ -308,11 +319,18 @@ def handle_search(query: str, verbose: bool = False) -> int:
             sys.stdout.write(f"- {c}\n")
         sys.stdout.write("\n")
 
-    has_live = any(not p.is_synthetic for p in providers)
-    if has_live:
+    has_live_prov = any(not p.is_synthetic for p in providers)
+    has_live_pubmed = any(not e.is_synthetic for e in evidence if e.source == "PubMed-Live")
+    if has_live_prov and has_live_pubmed:
         sys.stdout.write(
-            "[Notice: Provider records retrieved live from the public CMS NPPES Registry API v2.1. "
-            "Biomedical and patient education evidence remain simulated fixtures for M4A.]\n"
+            "[Notice: Provider records retrieved live from CMS NPPES Registry API v2.1. "
+            "Biomedical literature retrieved live from NCBI Entrez PubMed. "
+            "Patient education evidence (MedlinePlus) remains simulated fixtures for M4B.]\n"
+        )
+    elif has_live_prov:
+        sys.stdout.write(
+            "[Notice: Provider records retrieved live from CMS NPPES Registry API v2.1. "
+            "Evidence records retrieved from demonstration test fixtures.]\n"
         )
     else:
         sys.stdout.write(

@@ -43,18 +43,53 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
         if not p.specialty or p.specialty.strip() == "":
             missing_fields.append(f"Provider {p.provider_id} missing specialty")
 
-    # 2. Evidence validation
+    # 2. Evidence validation (PMID format, URL, duplicates, metadata)
     all_evidence = clinical_evidence + patient_education
     seen_evidence_ids: set[str] = set()
+    seen_pmids: set[str] = set()
+    duplicate_evidence_count = 0
+
     for e in all_evidence:
         if not e.citation_ref:
             missing_fields.append(f"Evidence {e.record_id} missing citation reference")
+        if not e.title or e.title.strip() == "":
+            missing_fields.append(f"Evidence {e.record_id} missing article title")
+
+        # Validate PMID format if pmid present or citation_ref starts with PMID:
+        pmid_to_check = e.pmid
+        if not pmid_to_check and e.citation_ref.startswith("PMID:"):
+            pmid_to_check = e.citation_ref.split(":", 1)[1].strip()
+
+        if pmid_to_check:
+            # Allow DEMO- prefix only for synthetic fixtures
+            if e.is_synthetic:
+                is_pmid_format_valid = pmid_to_check.replace("DEMO-", "").isdigit()
+            else:
+                is_pmid_format_valid = pmid_to_check.isdigit()
+
+            if not is_pmid_format_valid:
+                unsupported_claims.append(
+                    f"Evidence record {e.record_id} has invalid PMID format '{pmid_to_check}'."
+                )
+
+            if pmid_to_check in seen_pmids:
+                duplicate_evidence_count += 1
+                notes.append(f"Duplicate PubMed article detected: PMID {pmid_to_check}")
+            else:
+                seen_pmids.add(pmid_to_check)
+
+        # Validate publication URL if provided
+        if e.pubmed_url and not e.pubmed_url.startswith("https://pubmed.ncbi.nlm.nih.gov/"):
+            unsupported_claims.append(
+                f"Evidence record {e.record_id} has invalid PubMed URL '{e.pubmed_url}'."
+            )
+
         if e.record_id in seen_evidence_ids:
             notes.append(f"Duplicate evidence record: {e.record_id}")
         else:
             seen_evidence_ids.add(e.record_id)
 
-    # 3. Source provenance check
+    # 3. Source provenance check & Clinical Independence Guardrail
     provenance_verified = True
     for p in providers:
         if not p.source:
@@ -65,6 +100,15 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
         if not e.source:
             provenance_verified = False
             unsupported_claims.append(f"Evidence {e.title} has no verifiable source provenance.")
+
+    # Guardrail: Clinical research articles establish general biomedical literature existence,
+    # and must never be asserted as direct evidence of an individual clinician's qualifications,
+    # experience, or clinical outcomes.
+    if clinical_evidence and providers:
+        notes.append(
+            "Biomedical research studies establish literature context only; they do not attest "
+            "to specific individual provider clinical competence, board certification, or outcomes."
+        )
 
     # 4. Check for missing evidence
     if not providers and not all_evidence:

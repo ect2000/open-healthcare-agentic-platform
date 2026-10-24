@@ -76,7 +76,7 @@ SAMPLE_NPPES_API_RESPONSE = {
             "taxonomies": [
                 {
                     "code": "261QD0000X",
-                    "desc": "Dental Clinic",
+                    "desc": "Dental Clinic, Pediatric Dentistry",
                     "primary": True,
                 }
             ],
@@ -119,7 +119,7 @@ def test_nppes_normalization_individual_and_organization() -> None:
     assert org.name == "HOUSTON PEDIATRIC SMILES LLC"
     assert org.facility_name == "HOUSTON PEDIATRIC SMILES LLC"
     assert org.entity_type == "Organization"
-    assert org.specialty == "Dental Clinic"
+    assert "Dental Clinic" in org.specialty
     assert org.is_synthetic is False
 
 
@@ -209,3 +209,87 @@ def test_nppes_provider_retriever_offline_mocked_search() -> None:
         assert len(results) == 2
         assert results[0].npi == "1134345234"
         assert results[1].npi == "1982736450"
+
+
+def test_nppes_practice_location_and_taxonomy_regression_filtering() -> None:
+    """M4A Correction: Exclude candidates outside requested practice city or taxonomy."""
+    retriever = NPPESProviderRetriever()
+
+    mixed_response = {
+        "result_count": 3,
+        "results": [
+            # Candidate 1: In Houston practice location, Pediatric Dentistry -> KEEP
+            {
+                "number": "1111111111",
+                "enumeration_type": "NPI-1",
+                "basic": {"first_name": "Alice", "last_name": "Dentist"},
+                "addresses": [
+                    {
+                        "address_purpose": "LOCATION",
+                        "city": "Houston",
+                        "state": "TX",
+                        "address_1": "123 Main St",
+                    },
+                    {
+                        "address_purpose": "MAILING",
+                        "city": "Dallas",
+                        "state": "TX",
+                        "address_1": "PO Box 99",
+                    },
+                ],
+                "taxonomies": [
+                    {"code": "1223P0221X", "desc": "Dentist, Pediatric Dentistry", "primary": True}
+                ],
+            },
+            # Candidate 2: Columbus OH practice location, only mailing in Houston -> EXCLUDE
+            {
+                "number": "2222222222",
+                "enumeration_type": "NPI-1",
+                "basic": {"first_name": "Bob", "last_name": "Outofarea"},
+                "addresses": [
+                    {
+                        "address_purpose": "LOCATION",
+                        "city": "Columbus",
+                        "state": "OH",
+                        "address_1": "456 North St",
+                    },
+                    {
+                        "address_purpose": "MAILING",
+                        "city": "Houston",
+                        "state": "TX",
+                        "address_1": "PO Box 1",
+                    },
+                ],
+                "taxonomies": [
+                    {"code": "1223P0221X", "desc": "Dentist, Pediatric Dentistry", "primary": True}
+                ],
+            },
+            # Candidate 3: In Houston practice location, but taxonomy is Dermatology -> EXCLUDE
+            {
+                "number": "3333333333",
+                "enumeration_type": "NPI-1",
+                "basic": {"first_name": "Carol", "last_name": "Skin"},
+                "addresses": [
+                    {
+                        "address_purpose": "LOCATION",
+                        "city": "Houston",
+                        "state": "TX",
+                        "address_1": "789 Elm St",
+                    }
+                ],
+                "taxonomies": [{"code": "207N00000X", "desc": "Dermatology", "primary": True}],
+            },
+        ],
+    }
+
+    with patch.object(retriever, "_execute_request", return_value=mixed_response):
+        filtered = retriever.search_providers(
+            city="Houston",
+            state="TX",
+            specialty="Pediatric Dentistry",
+        )
+        assert len(filtered) == 1
+        assert filtered[0].npi == "1111111111"
+        assert filtered[0].name == "Alice Dentist"
+        assert filtered[0].city == "Houston"
+        assert filtered[0].specialty == "Dentist, Pediatric Dentistry"

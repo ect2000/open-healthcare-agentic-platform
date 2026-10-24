@@ -35,6 +35,12 @@ class Settings:
     nppes_api_url: str
     nppes_timeout_seconds: float
     nppes_max_retries: int
+    pubmed_api_url: str
+    pubmed_timeout_seconds: float
+    pubmed_max_retries: int
+    ncbi_api_key: str | None
+    ncbi_email: str | None
+    ncbi_tool: str
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -124,6 +130,45 @@ class Settings:
                 f"Invalid NPPES_MAX_RETRIES '{raw_nppes_retries}'. Must be a non-negative integer."
             ) from None
 
+        pubmed_api_url = source.get(
+            "PUBMED_API_URL", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+        ).strip()
+        if not pubmed_api_url.startswith(("http://", "https://")):
+            raise ConfigurationError(
+                f"Invalid PUBMED_API_URL '{pubmed_api_url}'. Must begin with http:// or https://."
+            )
+
+        raw_pubmed_timeout = source.get("PUBMED_TIMEOUT_SECONDS", "10")
+        try:
+            pubmed_timeout_seconds = float(raw_pubmed_timeout)
+            if pubmed_timeout_seconds <= 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid PUBMED_TIMEOUT_SECONDS '{raw_pubmed_timeout}'. Must be a positive number."
+            ) from None
+
+        raw_pubmed_retries = source.get("PUBMED_MAX_RETRIES", "2")
+        try:
+            pubmed_max_retries = int(raw_pubmed_retries)
+            if pubmed_max_retries < 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid PUBMED_MAX_RETRIES '{raw_pubmed_retries}'. "
+                "Must be a non-negative integer."
+            ) from None
+
+        raw_api_key = source.get("NCBI_API_KEY", "").strip()
+        ncbi_api_key = raw_api_key if raw_api_key else None
+
+        raw_email = source.get("NCBI_EMAIL", "").strip()
+        ncbi_email = raw_email if raw_email else None
+
+        ncbi_tool = source.get("NCBI_TOOL", "open-healthcare-agentic-platform").strip()
+        if not ncbi_tool:
+            ncbi_tool = "open-healthcare-agentic-platform"
+
         return cls(
             app_name=app_name,
             environment=environment,
@@ -136,6 +181,12 @@ class Settings:
             nppes_api_url=nppes_api_url,
             nppes_timeout_seconds=nppes_timeout_seconds,
             nppes_max_retries=nppes_max_retries,
+            pubmed_api_url=pubmed_api_url,
+            pubmed_timeout_seconds=pubmed_timeout_seconds,
+            pubmed_max_retries=pubmed_max_retries,
+            ncbi_api_key=ncbi_api_key,
+            ncbi_email=ncbi_email,
+            ncbi_tool=ncbi_tool,
         )
 
 

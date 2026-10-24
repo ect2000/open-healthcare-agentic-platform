@@ -139,3 +139,56 @@ def test_validator_detects_empty_state_and_missing_name_or_specialty() -> None:
     empty_res = validate_records({"provider_candidates": [], "clinical_evidence": []})
     notes = empty_res["validation_results"]["notes"]
     assert any("No provider or clinical evidence" in note for note in notes)
+
+
+def test_validator_pmid_format_url_and_duplicate_evidence() -> None:
+    """Verify validator flags invalid PMIDs, URLs, duplicates, and independence note."""
+    valid_provider = ProviderRecord(
+        provider_id="P_OK",
+        npi="1234567890",
+        name="Dr. Valid",
+        specialty="Pediatric Dentistry",
+        facility_name="Clinic",
+        city="Houston",
+        state="TX",
+        source="CMS-NPPES-Live",
+    )
+    # Article with invalid PMID and invalid URL
+    bad_article = ClinicalEvidenceRecord(
+        record_id="E_PUB1",
+        title="Study One",
+        source="PubMed-Live",
+        summary="Some summary",
+        evidence_type="research_study",
+        year=2024,
+        citation_ref="PMID:invalid_pmid",
+        pmid="invalid_pmid",
+        pubmed_url="http://fake-site.org/123",
+        is_synthetic=False,
+    )
+    # Duplicate article with same PMID
+    dup_article = ClinicalEvidenceRecord(
+        record_id="E_PUB2",
+        title="Study Two",
+        source="PubMed-Live",
+        summary="Another summary",
+        evidence_type="research_study",
+        year=2024,
+        citation_ref="PMID:invalid_pmid",
+        pmid="invalid_pmid",
+        pubmed_url="https://pubmed.ncbi.nlm.nih.gov/12345/",
+        is_synthetic=False,
+    )
+
+    state: HealthcareWorkflowState = {
+        "provider_candidates": [valid_provider],
+        "clinical_evidence": [bad_article, dup_article],
+        "patient_education_evidence": [],
+    }
+
+    res = validate_records(state)
+    val = res["validation_results"]
+    assert any("invalid PMID format" in claim for claim in val["unsupported_claims"])
+    assert any("invalid PubMed URL" in claim for claim in val["unsupported_claims"])
+    assert any("Duplicate PubMed article detected" in note for note in val["notes"])
+    assert any("do not attest to specific individual provider" in note for note in val["notes"])

@@ -18,6 +18,12 @@ from healthcare_agents.retrieval.nppes_client import (
     NPPESProviderRetriever,
     NPPESResponseError,
 )
+from healthcare_agents.retrieval.pubmed_client import (
+    PubMedClientError,
+    PubMedConnectionError,
+    PubMedEvidenceRetriever,
+    PubMedResponseError,
+)
 
 __all__ = [
     "SYNTHETIC_EVIDENCE",
@@ -32,4 +38,8 @@ __all__ = [
     "NPPESProviderRetriever",
     "NPPESResponseError",
     "ProviderRecord",
+    "PubMedClientError",
+    "PubMedConnectionError",
+    "PubMedEvidenceRetriever",
+    "PubMedResponseError",
 ]

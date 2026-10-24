@@ -94,7 +94,13 @@ class NPPESProviderRetriever(BaseProviderRetriever):
         full_url = f"{self.base_url}?{query_string}"
 
         raw_data = self._execute_request(full_url)
-        return self._normalize_response(raw_data, source_url=full_url)
+        return self._normalize_response(
+            raw_data,
+            source_url=full_url,
+            expected_city=city,
+            expected_state=state,
+            expected_specialty=specialty,
+        )
 
     def _execute_request(self, url: str) -> dict[str, Any]:
         """Execute HTTP GET with bounded retries and exponential backoff."""
@@ -148,8 +154,19 @@ class NPPESProviderRetriever(BaseProviderRetriever):
             f"Failed to query NPPES after {attempts} attempts: {last_error}"
         ) from last_error
 
-    def _normalize_response(self, data: dict[str, Any], source_url: str) -> list[ProviderRecord]:
-        """Parse raw NPPES results into strictly typed ProviderRecord instances."""
+    def _normalize_response(
+        self,
+        data: dict[str, Any],
+        source_url: str,
+        expected_city: str | None = None,
+        expected_state: str | None = None,
+        expected_specialty: str | None = None,
+    ) -> list[ProviderRecord]:
+        """Parse raw NPPES results into strictly typed ProviderRecord instances.
+
+        Validates requested city and state against normalized practice (LOCATION) address
+        and ensures relevant taxonomy matching to eliminate out-of-area or unrelated results.
+        """
         retrieval_timestamp = datetime.now(UTC).isoformat()
         results = data.get("results", [])
         if not isinstance(results, list):
@@ -193,9 +210,14 @@ class NPPESProviderRetriever(BaseProviderRetriever):
             taxonomies = item.get("taxonomies", [])
             primary_specialty = "General Practice"
             primary_taxonomy_code = ""
+            all_taxonomy_descriptions: list[str] = []
 
             if isinstance(taxonomies, list) and taxonomies:
-                # Find primary or first taxonomy
+                for tax in taxonomies:
+                    if isinstance(tax, dict) and tax.get("desc"):
+                        all_taxonomy_descriptions.append(str(tax["desc"]))
+
+                # Find primary or matching taxonomy
                 primary_tax = next(
                     (t for t in taxonomies if isinstance(t, dict) and t.get("primary") is True),
                     taxonomies[0] if isinstance(taxonomies[0], dict) else {},
@@ -204,12 +226,14 @@ class NPPESProviderRetriever(BaseProviderRetriever):
                     primary_specialty = primary_tax.get("desc") or primary_specialty
                     primary_taxonomy_code = primary_tax.get("code") or ""
 
-            # Parse Addresses: differentiate practice (LOCATION) vs mailing (MAILING)
+            # Parse Addresses: strictly differentiate practice (LOCATION) vs mailing (MAILING)
             addresses = item.get("addresses", [])
             practice_addr_str = ""
             mailing_addr_str = ""
-            city = ""
-            state = ""
+            practice_city = ""
+            practice_state = ""
+            mailing_city = ""
+            mailing_state = ""
             telephone = ""
 
             if isinstance(addresses, list):
@@ -230,18 +254,62 @@ class NPPESProviderRetriever(BaseProviderRetriever):
 
                     if purpose == "LOCATION":
                         practice_addr_str = addr_summary
-                        city = addr_city
-                        state = addr_state
+                        practice_city = addr_city
+                        practice_state = addr_state
                         if phone:
                             telephone = phone
                     elif purpose == "MAILING":
                         mailing_addr_str = addr_summary
-                        if not city:
-                            city = addr_city
-                        if not state:
-                            state = addr_state
+                        mailing_city = addr_city
+                        mailing_state = addr_state
                         if not telephone and phone:
                             telephone = phone
+
+            # Fallback to mailing city/state only if location purpose was omitted in record
+            resolved_city = practice_city or mailing_city
+            resolved_state = practice_state or mailing_state
+
+            # M4A Data Quality Correction:
+            # 1. Validate requested city against practice location (not mailing address)
+            if expected_city and practice_city:
+                if expected_city.strip().lower() != practice_city.strip().lower():
+                    logger.debug(
+                        "Excluding provider NPI %s: practice city '%s' does not match '%s'",
+                        npi,
+                        practice_city,
+                        expected_city,
+                    )
+                    continue
+
+            # 2. Validate requested state against practice location
+            if expected_state and practice_state:
+                if expected_state.strip().upper()[:2] != practice_state.strip().upper()[:2]:
+                    logger.debug(
+                        "Excluding provider NPI %s: practice state '%s' does not match '%s'",
+                        npi,
+                        practice_state,
+                        expected_state,
+                    )
+                    continue
+
+            # 3. Validate taxonomy relevance if specialty was requested
+            if expected_specialty:
+                expected_tokens = set(expected_specialty.lower().split())
+                # Must match any taxonomy attached to provider
+                matched_taxonomy = False
+                for tax_desc in all_taxonomy_descriptions:
+                    tax_lower = tax_desc.lower()
+                    if any(tok in tax_lower for tok in expected_tokens if len(tok) > 3):
+                        matched_taxonomy = True
+                        break
+                if not matched_taxonomy and all_taxonomy_descriptions:
+                    logger.debug(
+                        "Excluding provider NPI %s: taxonomies %s do not match expected '%s'",
+                        npi,
+                        all_taxonomy_descriptions,
+                        expected_specialty,
+                    )
+                    continue
 
             metadata: dict[str, str] = {
                 "enumeration_type": enum_type,
@@ -258,8 +326,8 @@ class NPPESProviderRetriever(BaseProviderRetriever):
                 name=name,
                 specialty=primary_specialty,
                 facility_name=facility_name,
-                city=city or "Unknown",
-                state=state or "Unknown",
+                city=resolved_city or "Unknown",
+                state=resolved_state or "Unknown",
                 source="CMS-NPPES-Live",
                 is_synthetic=False,
                 entity_type=entity_type,

@@ -98,7 +98,8 @@ def synthesize_answer(
     # Deterministic fallback synthesis if model call was unavailable
     if not final_answer:
         providers = state.get("provider_candidates", [])
-        evidence = state.get("clinical_evidence", []) + state.get("patient_education_evidence", [])
+        clinical_evidence = state.get("clinical_evidence", [])
+        patient_education = state.get("patient_education_evidence", [])
 
         summary_parts: list[str] = [
             f'**Healthcare Discovery Summary for:** *"{state.get("original_query", "")}"*\n',
@@ -119,25 +120,49 @@ def synthesize_answer(
         else:
             summary_parts.append("- No matching providers found.")
 
-        summary_parts.append("\n### Supporting Evidence & Clinical Literature (Simulated Fixtures)")
-        if evidence:
-            for e in evidence:
+        has_live_pubmed = any(not e.is_synthetic for e in clinical_evidence)
+        research_heading = (
+            "### Biomedical Literature & Research (Live PubMed)"
+            if has_live_pubmed
+            else "### Biomedical Literature & Research (Simulated Fixtures)"
+        )
+        summary_parts.append(f"\n{research_heading}")
+        if clinical_evidence:
+            for e in clinical_evidence:
+                url_str = f"\n  - URL: {e.pubmed_url}" if e.pubmed_url else ""
+                author_str = f"\n  - Authors: {', '.join(e.authors[:3])}" if e.authors else ""
+                summary_parts.append(
+                    f"- **{e.title}** ({e.year})\n  - {e.summary}\n  - Citation: `{e.citation_ref}`"
+                    f"{author_str}{url_str}"
+                )
+        else:
+            summary_parts.append("- No relevant clinical research articles retrieved.")
+
+        summary_parts.append("\n### Patient Education Evidence (Simulated Fixtures)")
+        if patient_education:
+            for e in patient_education:
                 summary_parts.append(
                     f"- **{e.title}** ({e.year})\n  - {e.summary}\n  - Citation: `{e.citation_ref}`"
                 )
         else:
-            summary_parts.append("- No relevant clinical evidence records retrieved.")
+            summary_parts.append("- No patient education topics retrieved.")
 
-        has_live = any(not p.is_synthetic for p in providers)
+        has_live_prov = any(not p.is_synthetic for p in providers)
         prov_notice = (
             "Provider records retrieved live from the public CMS NPPES registry."
-            if has_live
+            if has_live_prov
             else "Provider records are demonstration test fixtures."
         )
+        pub_notice = (
+            "Biomedical research articles retrieved live from NCBI PubMed (E-utilities v2.0)."
+            if has_live_pubmed
+            else "Research evidence retrieved from demonstration test fixtures."
+        )
         summary_parts.append(
-            f"\n*Notice: {prov_notice} Research and patient education evidence remain "
-            "simulated demonstration fixtures for M4A. An NPI is an administrative identifier and "
-            "not proof of clinical competence, licensing status, or quality. "
+            f"\n*Notice: {prov_notice} {pub_notice} Patient education evidence (MedlinePlus) "
+            "remains simulated fixtures for M4B. An NPI is an administrative identifier and not "
+            "proof of licensure or competence; a PubMed citation establishes literature "
+            "publication and does not substitute for individualized medical advice. "
             "Always consult a licensed clinician.*"
         )
         final_answer = "\n".join(summary_parts)

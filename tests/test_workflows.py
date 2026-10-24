@@ -210,7 +210,7 @@ def test_answer_agent_deterministic_synthesis() -> None:
 
     assert "Dr. Jane Smith, DDS" in result["final_answer"]
     assert "Early Caries Prevention" in result["final_answer"]
-    assert "demonstration fixtures" in result["final_answer"].lower()
+    assert "fixture" in result["final_answer"].lower()
 
 
 def test_healthcare_graph_compilation_and_execution() -> None:

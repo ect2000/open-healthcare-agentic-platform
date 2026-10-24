@@ -12,8 +12,8 @@ This directory maintains the historical documentation, execution records, implem
 | [M02-gemma-ollama](./M02-gemma-ollama/) | `v0.2.0-m02` | Local Gemma 4 Serving via Ollama & Model Adapter Interface | Complete |
 | [M03-langgraph-agents](./M03-langgraph-agents/) | `v0.3.0-m03` | LangGraph Multi-Agent Orchestration & Grounded Discovery | Complete |
 | [M04A-nppes](./M04A-nppes/) | `v0.4.0-m04a` | Live Public NPPES NPI Registry Provider Discovery (API v2.1) | Complete |
-| M04B-pubmed | `v0.4.0-m04b` | Live PubMed Biomedical Research Literature Discovery | Planned |
-| M04C-cms | `v0.4.0-m04c` | CMS Provider Data Clinician & Facility Quality Metrics | Planned |
+| [M04B-pubmed](./M04B-pubmed/) | `v0.4.1-m04b` | Live PubMed Biomedical Research Literature Discovery | Complete |
+| M04C-cms | `v0.4.2-m04c` | CMS Provider Data Clinician & Facility Quality Metrics | Planned |
 | M04D-medline | `v0.4.0-m04d` | MedlinePlus Patient-Friendly Health Topics & Drug Data | Planned |
 | M04E-mcp | `v0.4.0-m04e` | Model Context Protocol (MCP) Healthcare Server Unification | Planned |
 | M05-ui-gateway | `v0.5.0-m05` | Streamlit User Interface & FastAPI Gateway | Planned |

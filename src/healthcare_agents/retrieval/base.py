@@ -36,12 +36,20 @@ class ClinicalEvidenceRecord:
 
     record_id: str
     title: str
-    source: str  # e.g. "PubMed-Demo-Fixture", "MedlinePlus-Demo-Fixture"
+    source: str  # e.g. "PubMed-Live", "PubMed-Demo-Fixture", "MedlinePlus-Demo-Fixture"
     summary: str
     evidence_type: str  # "research_study", "clinical_guideline", "patient_education"
     year: int
     is_synthetic: bool = True
     citation_ref: str = ""
+    pmid: str = ""
+    authors: tuple[str, ...] = ()
+    journal: str = ""
+    doi: str = ""
+    pubmed_url: str = ""
+    retrieval_timestamp: str = ""
+    source_type: str = "PubMed"
+    evidence_status: str = "available"  # "available", "no_abstract", "empty_results", "error"
 
 
 class BaseProviderRetriever(ABC):
