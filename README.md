@@ -80,13 +80,21 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ---
 
-## 5. Workflow Architecture (Milestone M4A)
+## 5. Workflow Architecture
+
+### Milestone M4A — Live CMS NPPES Registry Workflow (Current)
 
 The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider retrieval:
 
 ![LangGraph Healthcare Workflow](docs/images/m4a_workflow.svg)
 
 > **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Research literature and patient education evidence remain simulated fixtures for M4A and will transition to live APIs in M4B–M4D.
+
+### Milestone M3 — Multi-Agent LangGraph Core Architecture (Synthetic Fixtures)
+
+The foundational multi-agent orchestration architecture coordinates planning, deterministic fixture retrieval, deterministic validation, and grounded Gemma 4 synthesis:
+
+![M3 LangGraph Healthcare Workflow](docs/images/m3_workflow.png)
 
 ---
 
