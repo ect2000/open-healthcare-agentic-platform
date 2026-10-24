@@ -25,11 +25,13 @@ def format_context(state: HealthcareWorkflowState) -> str:
     providers = state.get("provider_candidates", [])
     clinical_evidence = state.get("clinical_evidence", [])
     patient_education = state.get("patient_education_evidence", [])
+    cms_quality = state.get("cms_quality", [])
+    excluded = state.get("excluded_evidence", [])
     validation = state.get("validation_results", {})
 
     lines: list[str] = [
         f"USER QUERY: {state.get('original_query', '')}",
-        "\n--- VALIDATED PROVIDER CANDIDATES ---",
+        "\n--- RANKED PROVIDER CANDIDATES (Ranked by specialty and location match) ---",
     ]
 
     if providers:
@@ -44,14 +46,15 @@ def format_context(state: HealthcareWorkflowState) -> str:
     else:
         lines.append("(No provider candidates retrieved)")
 
-    lines.append("\n--- RESEARCH & CLINICAL EVIDENCE ---")
+    lines.append(
+        "\n--- RANKED CLINICAL RESEARCH EVIDENCE (Ranked by topical relevance & recency) ---"
+    )
     if clinical_evidence:
         for e in clinical_evidence:
             lines.append(f"- [{e.source}: {e.citation_ref}] {e.title} ({e.year}): {e.summary}")
     else:
         lines.append("(No clinical studies retrieved)")
 
-    cms_quality = state.get("cms_quality", [])
     lines.append("\n--- CMS QUALITY & PERFORMANCE MEASURES ---")
     if cms_quality:
         for q in cms_quality:
@@ -65,12 +68,18 @@ def format_context(state: HealthcareWorkflowState) -> str:
             "quality data reflects public reporting scope, e.g. dentistry, not low quality.)"
         )
 
-    lines.append("\n--- PATIENT EDUCATION EVIDENCE ---")
+    lines.append("\n--- PATIENT EDUCATION EVIDENCE (MedlinePlus) ---")
     if patient_education:
         for e in patient_education:
             lines.append(f"- [{e.source}: {e.citation_ref}] {e.title} ({e.year}): {e.summary}")
     else:
         lines.append("(No patient education topics retrieved)")
+
+    if excluded:
+        lines.append("\n--- EXCLUDED CANDIDATE EVIDENCE ---")
+        for ex in excluded[:5]:  # Show top 5 exclusions for context
+            reason = ex.relevance.exclusion_reason or "Low topical relevance"
+            lines.append(f"- [EXCLUDED: {ex.citation_id}] {ex.title_or_name}: {reason}")
 
     if validation.get("unsupported_claims"):
         lines.append("\n--- VALIDATION WARNINGS ---")
@@ -223,8 +232,17 @@ def synthesize_answer(
         final_answer = "\n".join(summary_parts)
 
     metadata["answer_completed"] = True
-    return {
+    result: dict[str, Any] = {
         "final_answer": final_answer,
         "execution_metadata": metadata,
         "errors": errors,
     }
+    structured_res = state.get("structured_discovery_result")
+    if structured_res:
+        from dataclasses import replace
+
+        result["structured_discovery_result"] = replace(
+            structured_res, grounded_answer=final_answer
+        )
+
+    return result

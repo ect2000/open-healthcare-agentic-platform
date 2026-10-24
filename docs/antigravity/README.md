@@ -15,7 +15,7 @@ This directory maintains the historical documentation, execution records, implem
 | [M04B-pubmed](./M04B-pubmed/) | `v0.4.1-m04b` | Live PubMed Biomedical Research Literature Discovery | Complete |
 | [M04C-cms](./M04C-cms/) | `v0.4.2-m04c` | CMS Provider Data Clinician & Facility Quality Metrics | Complete |
 | [M04D-medlineplus](./M04D-medlineplus/) | `v0.4.3-m04d` | Live NLM MedlinePlus Patient Education & Health Topics | Complete |
-| M04E-mcp | `v0.4.0-m04e` | Model Context Protocol (MCP) Healthcare Server Unification | Planned |
+| [M04E-unified-evidence](./M04E-unified-evidence/) | `v0.4.4-m04e` | Unified Evidence Normalization, Ranking, Deduplication & Provenance | Complete |
 | M05-ui-gateway | `v0.5.0-m05` | Streamlit User Interface & FastAPI Gateway | Planned |
 | M06-k8s-observability | `v0.6.0-m06` | Docker, Kubernetes, Helm, vLLM & OpenTelemetry | Planned |
 

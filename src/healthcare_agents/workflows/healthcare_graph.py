@@ -104,6 +104,7 @@ def create_healthcare_graph(
     """Build and return an uncompiled StateGraph for healthcare multi-agent discovery."""
     from healthcare_agents.agents.answer import synthesize_answer
     from healthcare_agents.agents.evidence import retrieve_evidence
+    from healthcare_agents.agents.evidence_processor import process_evidence_node
     from healthcare_agents.agents.planner import plan_query
     from healthcare_agents.agents.provider import retrieve_providers
     from healthcare_agents.agents.validator import validate_records
@@ -142,6 +143,9 @@ def create_healthcare_graph(
             patient_education_retriever=resolved_education_retriever,
         )
 
+    def processor_node(state: HealthcareWorkflowState) -> dict[str, Any]:
+        return process_evidence_node(state=state)
+
     def validation_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         return validate_records(state=state)
 
@@ -151,15 +155,17 @@ def create_healthcare_graph(
     workflow.add_node("planner", planner_node)
     workflow.add_node("provider_retrieval", provider_node)
     workflow.add_node("evidence_retrieval", evidence_node)
+    workflow.add_node("evidence_processor", processor_node)
     workflow.add_node("validator", validation_node)
     workflow.add_node("answer_synthesis", answer_node)
 
     # Flow: START -> planner -> provider_retrieval -> evidence_retrieval
-    # -> validator -> answer_synthesis -> END
+    # -> evidence_processor -> validator -> answer_synthesis -> END
     workflow.add_edge(START, "planner")
     workflow.add_edge("planner", "provider_retrieval")
     workflow.add_edge("provider_retrieval", "evidence_retrieval")
-    workflow.add_edge("evidence_retrieval", "validator")
+    workflow.add_edge("evidence_retrieval", "evidence_processor")
+    workflow.add_edge("evidence_processor", "validator")
     workflow.add_edge("validator", "answer_synthesis")
     workflow.add_edge("answer_synthesis", END)
 
@@ -193,6 +199,9 @@ def run_healthcare_workflow(
         "patient_education_evidence": [],
         "cms_quality": [],
         "unmatched_cms_records": [],
+        "unified_evidence": [],
+        "excluded_evidence": [],
+        "provenance_records": [],
         "citations": [],
         "validation_results": {},
         "unsupported_claims": [],

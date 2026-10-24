@@ -334,8 +334,22 @@ def handle_search(query: str, verbose: bool = False) -> int:
             )
         sys.stdout.write("\n")
 
-        sys.stdout.write("--- [Stage 5: Deterministic Validation] ---\n")
+        sys.stdout.write("--- [Stage 5: Evidence Processing & Deterministic Validation] ---\n")
+        unified_items = state.get("unified_evidence", [])
+        excluded_items = state.get("excluded_evidence", [])
+        prov_recs = state.get("provenance_records", [])
+        sys.stdout.write(f"Total Normalized Items: {len(unified_items)}\n")
+        sys.stdout.write(f"Excluded Items:         {len(excluded_items)}\n")
+        sys.stdout.write(f"Provenance Records:     {len(prov_recs)}\n")
+        if excluded_items:
+            sys.stdout.write("Sample Excluded Items (Relevance/Quality Filtering):\n")
+            for ex in excluded_items[:3]:
+                reason = ex.relevance.exclusion_reason or "Low topical relevance"
+                sys.stdout.write(f"  - [{ex.citation_id}] {ex.title_or_name}: {reason}\n")
+        sys.stdout.write("\n")
+
         valid_str = "VALID" if validation.get("is_valid") else "INVALID"
+        sys.stdout.write("--- [Stage 5: Deterministic Validation] ---\n")
         sys.stdout.write(f"Status:             {valid_str}\n")
         sys.stdout.write(f"Duplicates Checked: {validation.get('duplicate_providers_found', 0)}\n")
         sys.stdout.write(f"Provenance OK:      {validation.get('provenance_verified')}\n")

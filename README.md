@@ -74,14 +74,19 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Safe, exact NPI-based joins against candidate providers; unmatched CMS records kept strictly unjoined.
   - PubMed query refinement (`[Title/Abstract]` and `[MeSH Terms]`) and deterministic title/abstract relevance safeguards preventing unrelated study retrieval.
   - Quality guardrails: missing CMS quality data explicitly documented as lack of public program scope (e.g. dentistry), never low quality.
-- [x] **Milestone M4D — Live MedlinePlus Patient Education Integration** *(Current)*:
+- [x] **Milestone M4D — Live MedlinePlus Patient Education Integration**:
   - Official U.S. National Library of Medicine (NLM) MedlinePlus Web Service client (`src/healthcare_agents/retrieval/medlineplus_client.py`).
   - Authoritative English (`healthTopics`) and Spanish (`healthTopicsSpanish`) consumer health topics, official URLs, and plain-language summaries.
   - Client-side throttling enforcing strict acceptable use threshold (<85 req/min) and thread-safe in-memory 12h TTL caching.
   - Optional MedlinePlus Connect adapter for standardized ICD-10-CM / RxCUI / SNOMED CT code-based education.
   - Comprehensive deterministic validation: official MedlinePlus domain verification, consumer education guardrails, and 4-way data source separation.
-- [ ] **Milestone M4E — Model Context Protocol (MCP) Server Unification**:
-  - Unified MCP healthcare tool server interface across all four data sources.
+- [x] **Milestone M4E — Unified Evidence Normalization, Ranking, Deduplication & Provenance** *(Current)*:
+  - Unified evidence processing layer (`src/healthcare_agents/evidence/`) across all four live public healthcare sources.
+  - Typed normalization preserving underlying source records (`original_provider`, `original_record`, `original_cms`).
+  - Deterministic deduplication (exact 10-digit NPI, exact PMID/DOI, CMS reporting period isolation, canonical MedlinePlus URLs with English/Spanish distinction).
+  - Explainable source-specific relevance and ranking (no fabricated universal clinician quality score).
+  - Explicit topical regression guards (rejection of unrelated studies such as PMID 39046104 dementia GWAS for pediatric dental queries).
+  - Traceable source provenance ledger verifying authorized domains (`nih.gov`, `cms.gov`, `hhs.gov`) and citation boundaries.
 - [ ] **Milestone M5 — Streamlit UI & FastAPI Gateway**:
   - Interactive web interface for clinicians and patients, REST and streaming APIs.
 - [ ] **Milestone M6 — Docker, Kubernetes, vLLM & OpenTelemetry**:
@@ -91,11 +96,11 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ## 5. Workflow Architecture
 
-### Milestone M4D — 4-Source Live Healthcare Discovery Workflow (Current)
+### Milestone M4E — Unified Evidence Processing & Multi-Source Discovery (Current)
 
 The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents coordinating all four authoritative public healthcare data sources:
 
-![M4D LangGraph 4-Source Healthcare Discovery Workflow](docs/images/m4d_workflow.png)
+![M4E Unified Evidence Workflow](docs/images/m4e_workflow.png)
 
 > **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Biomedical research citations retrieved from NCBI PubMed establish that a publication exists in the scientific literature, not that its conclusions are universally valid or applicable to an individual patient. CMS Provider Data quality metrics (MIPS scores and hospital star ratings) reflect public program participation; the absence of CMS measures for a provider (common in non-Medicare specialties like pediatric dentistry) denotes dataset reporting scope, not poor clinical quality. MedlinePlus patient education content provides general consumer health literacy and does not constitute personalized clinical advice, diagnosis, or treatment. Always consult a licensed clinician.
 

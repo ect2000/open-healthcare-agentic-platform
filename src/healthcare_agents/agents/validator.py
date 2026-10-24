@@ -160,11 +160,29 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
         "not poor clinical quality."
     )
 
-    # 5. Check for missing evidence
+    # 5. Provenance registry and citation verification
+    unified_items = state.get("unified_evidence", [])
+    if unified_items:
+        from healthcare_agents.evidence.provenance import verify_citation_integrity
+
+        # Join text representation of candidate facts to test citation integrity
+        full_text_sample = " ".join([p.name for p in providers] + [e.title for e in all_evidence])
+        citation_check = verify_citation_integrity(full_text_sample, unified_items)
+        if not citation_check.is_valid:
+            for uncited in citation_check.unresolved_citations:
+                unsupported_claims.append(f"Citation [{uncited}] not found in retrieved evidence.")
+            for boundary in citation_check.boundary_violations:
+                unsupported_claims.append(f"Citation boundary violation: {boundary}")
+            for dup in citation_check.duplicate_citation_ids:
+                notes.append(f"Duplicate citation ID detected: {dup}")
+            for url_err in citation_check.url_mismatches:
+                unsupported_claims.append(f"URL domain mismatch: {url_err}")
+
+    # 6. Check for missing evidence
     if not providers and not all_evidence:
         notes.append("No provider or clinical evidence records retrieved.")
 
-    is_valid = len(missing_fields) == 0 and provenance_verified
+    is_valid = len(missing_fields) == 0 and provenance_verified and len(unsupported_claims) == 0
 
     validation: ValidationResults = {
         "is_valid": is_valid,

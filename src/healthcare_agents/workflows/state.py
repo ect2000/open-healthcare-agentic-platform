@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
+from healthcare_agents.evidence.schemas import (
+    ProvenanceRecord,
+    StructuredDiscoveryResult,
+    UnifiedEvidenceItem,
+)
 from healthcare_agents.retrieval.base import (
     ClinicalEvidenceRecord,
     CMSQualityRecord,
@@ -43,6 +48,10 @@ class HealthcareWorkflowState(TypedDict, total=False):
     patient_education_evidence: list[ClinicalEvidenceRecord]
     cms_quality: list[CMSQualityRecord]
     unmatched_cms_records: list[CMSQualityRecord]
+    unified_evidence: list[UnifiedEvidenceItem]
+    excluded_evidence: list[UnifiedEvidenceItem]
+    provenance_records: list[ProvenanceRecord]
+    structured_discovery_result: StructuredDiscoveryResult
     citations: list[str]
     validation_results: ValidationResults
     unsupported_claims: list[str]
