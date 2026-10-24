@@ -121,10 +121,13 @@ class FixtureProviderRetriever(BaseProviderRetriever):
         specialty: str | None = None,
         city: str | None = None,
         state: str | None = None,
+        npi: str | None = None,
         limit: int = 5,
     ) -> Sequence[ProviderRecord]:
         matches: list[ProviderRecord] = []
         for p in self._records:
+            if npi and p.npi != npi:
+                continue
             if specialty and specialty.lower() not in p.specialty.lower():
                 continue
             if city and city.lower() not in p.city.lower():

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 _VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 _VALID_ENVIRONMENTS = {"development", "staging", "production", "test"}
 _VALID_MODEL_PROVIDERS = {"ollama", "vllm"}
+_VALID_RETRIEVAL_MODES = {"live", "fixture"}
 
 
 class ConfigurationError(ValueError):
@@ -30,6 +31,10 @@ class Settings:
     model_name: str
     ollama_base_url: str
     model_timeout_seconds: float
+    retrieval_mode: str
+    nppes_api_url: str
+    nppes_timeout_seconds: float
+    nppes_max_retries: int
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -86,6 +91,39 @@ class Settings:
                 f"Invalid MODEL_TIMEOUT_SECONDS '{raw_timeout}'. Must be a positive number."
             ) from None
 
+        retrieval_mode = source.get("RETRIEVAL_MODE", "live").strip().lower()
+        if retrieval_mode not in _VALID_RETRIEVAL_MODES:
+            raise ConfigurationError(
+                f"Invalid RETRIEVAL_MODE '{retrieval_mode}'. Expected one of: "
+                f"{', '.join(sorted(_VALID_RETRIEVAL_MODES))}."
+            )
+
+        nppes_api_url = source.get("NPPES_API_URL", "https://npiregistry.cms.hhs.gov/api/").strip()
+        if not nppes_api_url.startswith(("http://", "https://")):
+            raise ConfigurationError(
+                f"Invalid NPPES_API_URL '{nppes_api_url}'. Must begin with http:// or https://."
+            )
+
+        raw_nppes_timeout = source.get("NPPES_TIMEOUT_SECONDS", "10")
+        try:
+            nppes_timeout_seconds = float(raw_nppes_timeout)
+            if nppes_timeout_seconds <= 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid NPPES_TIMEOUT_SECONDS '{raw_nppes_timeout}'. Must be a positive number."
+            ) from None
+
+        raw_nppes_retries = source.get("NPPES_MAX_RETRIES", "2")
+        try:
+            nppes_max_retries = int(raw_nppes_retries)
+            if nppes_max_retries < 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid NPPES_MAX_RETRIES '{raw_nppes_retries}'. Must be a non-negative integer."
+            ) from None
+
         return cls(
             app_name=app_name,
             environment=environment,
@@ -94,6 +132,10 @@ class Settings:
             model_name=model_name,
             ollama_base_url=ollama_base_url,
             model_timeout_seconds=model_timeout_seconds,
+            retrieval_mode=retrieval_mode,
+            nppes_api_url=nppes_api_url,
+            nppes_timeout_seconds=nppes_timeout_seconds,
+            nppes_max_retries=nppes_max_retries,
         )
 
 

@@ -43,6 +43,8 @@ def test_live_healthcare_langgraph_workflow() -> None:
     # 5. Answer synthesis with Gemma 4
     answer = result["final_answer"]
     assert len(answer) > 100
-    assert "Smith" in answer or "Vance" in answer
-    assert "Houston" in answer
+    assert any(
+        cand.name.split()[-1].lower() in answer.lower() for cand in result["provider_candidates"]
+    )
+    assert "houston" in answer.lower()
     assert len(result["citations"]) >= 2

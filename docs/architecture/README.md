@@ -1,7 +1,7 @@
 # Target Architecture: Open Healthcare Agentic Platform
 
 > **Status Notice:** This document describes the **TARGET ARCHITECTURE** for the platform.  
-> As of Milestone M3 (LangGraph Multi-Agent Orchestration), the baseline Python packaging, CLI, configuration scaffolding, local Gemma 4 model adapter (`src/healthcare_agents/models/`), and typed LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/` and `src/healthcare_agents/agents/`) with synthetic retrieval fixtures are active. Live MCP data connectors (NPPES, PubMed, CMS, MedlinePlus) and Kubernetes deployments are planned for upcoming milestones (M4–M6).
+> As of Milestone M4A (Live NPPES Provider Discovery), the baseline Python packaging, CLI, configuration scaffolding, local Gemma 4 model adapter (`src/healthcare_agents/models/`), LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/`), and **live CMS NPPES Registry API v2.1 client** (`src/healthcare_agents/retrieval/nppes_client.py`) are active. Live PubMed biomedical literature, CMS quality metrics, MedlinePlus patient education, MCP tools unification, and Kubernetes deployments are planned for upcoming milestones (M4B–M6).
 
 ---
 

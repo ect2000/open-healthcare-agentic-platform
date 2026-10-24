@@ -21,21 +21,26 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
     missing_fields: list[str] = []
     notes: list[str] = []
 
-    # 1. Duplicate detection
+    # 1. Duplicate detection and NPI format validation
     seen_npis: set[str] = set()
     duplicates_count = 0
     for p in providers:
         if not p.npi:
             missing_fields.append(f"Provider {p.provider_id} missing NPI")
-        elif p.npi in seen_npis:
-            duplicates_count += 1
-            notes.append(f"Duplicate provider detected: NPI {p.npi}")
         else:
-            seen_npis.add(p.npi)
+            if not (p.npi.isdigit() and len(p.npi) == 10):
+                unsupported_claims.append(
+                    f"Provider {p.name} has invalid NPI format '{p.npi}' (expected 10 digits)."
+                )
+            if p.npi in seen_npis:
+                duplicates_count += 1
+                notes.append(f"Duplicate provider detected: NPI {p.npi}")
+            else:
+                seen_npis.add(p.npi)
 
-        if not p.name:
+        if not p.name or p.name.strip() == "":
             missing_fields.append(f"Provider {p.provider_id} missing name")
-        if not p.specialty:
+        if not p.specialty or p.specialty.strip() == "":
             missing_fields.append(f"Provider {p.provider_id} missing specialty")
 
     # 2. Evidence validation

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class ProviderRecord:
-    """Healthcare provider candidate record."""
+    """Healthcare provider candidate record normalized from registry or fixture data."""
 
     provider_id: str
     npi: str
@@ -20,6 +20,13 @@ class ProviderRecord:
     state: str
     source: str
     is_synthetic: bool = True
+    entity_type: str = "Individual"  # "Individual" (NPI-1) or "Organization" (NPI-2)
+    taxonomy_code: str = ""
+    practice_address: str = ""
+    mailing_address: str = ""
+    telephone: str = ""
+    retrieval_timestamp: str = ""
+    source_url: str = ""
     metadata: dict[str, str] = field(default_factory=dict)
 
 
@@ -46,9 +53,10 @@ class BaseProviderRetriever(ABC):
         specialty: str | None = None,
         city: str | None = None,
         state: str | None = None,
+        npi: str | None = None,
         limit: int = 5,
     ) -> Sequence[ProviderRecord]:
-        """Retrieve candidate provider records."""
+        """Retrieve candidate provider records matching criteria."""
 
 
 class BaseEvidenceRetriever(ABC):

@@ -53,15 +53,26 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Unified model adapter abstraction (`src/healthcare_agents/models/`) and streaming prompt interface.
   - CLI model subcommands: `healthcare-agents model status` and `healthcare-agents model chat`.
   - Offline unit tests and opt-in live local inference tests with 93%+ coverage.
-- [x] **Milestone M3 — LangGraph Multi-Agent Orchestration** *(Current)*:
+- [x] **Milestone M3 — LangGraph Multi-Agent Orchestration**:
   - Typed multi-agent discovery workflow using LangGraph (`src/healthcare_agents/workflows/`).
   - Five core agent modules: Planner, Provider Retrieval, Research Evidence, Deterministic Validator, and Answer Synthesis.
   - Deterministic Python verification for deduplication, NPI validity, and claim grounding.
-  - Deterministic synthetic fixtures for provider & evidence retrieval (preparing interfaces for M4 live connectors).
-  - CLI discovery command: `healthcare-agents search --query "..." [--verbose]`.
-  - Comprehensive offline test suite (96.14% coverage) and opt-in real Gemma 4 LangGraph tests.
-- [ ] **Milestone M4 — Model Context Protocol (MCP) Healthcare Data Tools**:
-  - Connectors and MCP servers for NPPES, PubMed, CMS Provider Data, and MedlinePlus.
+  - Comprehensive offline test suite and opt-in real Gemma 4 LangGraph tests.
+- [x] **Milestone M4A — Live NPPES Provider Discovery** *(Current)*:
+  - Real public CMS NPPES NPI Registry API version 2.1 client (`src/healthcare_agents/retrieval/nppes_client.py`).
+  - Real provider search by specialty, taxonomy description, city, state, and direct 10-digit NPI lookup.
+  - Typed provider normalization capturing NPI-1/NPI-2 entity types, practice vs mailing addresses, phone numbers.
+  - Configurable retrieval mode (`RETRIEVAL_MODE=live` or `RETRIEVAL_MODE=fixture`).
+  - Strict 10-digit NPI format verification and source provenance enforcement in the deterministic validator.
+  - CLI discovery display showing real NPIs, practice locations, telephone, and retrieval timestamps.
+- [ ] **Milestone M4B — Live PubMed Biomedical Research Literature Discovery**:
+  - Real PubMed / NCBI Entrez API client for biomedical studies and clinical abstracts.
+- [ ] **Milestone M4C — CMS Provider Data Quality Metrics**:
+  - CMS clinician ratings, hospital performance, and facility metrics.
+- [ ] **Milestone M4D — MedlinePlus Consumer Health & Drug Information**:
+  - Trusted patient education health topics and drug monographs.
+- [ ] **Milestone M4E — Model Context Protocol (MCP) Server Unification**:
+  - Unified MCP healthcare tool server interface across all four data sources.
 - [ ] **Milestone M5 — Streamlit UI & FastAPI Gateway**:
   - Interactive web interface for clinicians and patients, REST and streaming APIs.
 - [ ] **Milestone M6 — Docker, Kubernetes, vLLM & OpenTelemetry**:
@@ -69,13 +80,13 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ---
 
-## 5. Workflow Architecture (Milestone M3)
+## 5. Workflow Architecture (Milestone M4A)
 
-The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents:
+The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider retrieval:
 
-![LangGraph Healthcare Workflow](docs/images/m3_workflow.svg)
+![LangGraph Healthcare Workflow](docs/images/m4a_workflow.svg)
 
-> **Note on Retrieval Data**: In Milestone M3, provider and research evidence retrieval uses deterministic synthetic fixtures to validate multi-agent coordination without external network dependencies. Live public healthcare API integrations (NPPES, PubMed, CMS, MedlinePlus) are implemented in Milestone M4.
+> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Research literature and patient education evidence remain simulated fixtures for M4A and will transition to live APIs in M4B–M4D.
 
 ---
 

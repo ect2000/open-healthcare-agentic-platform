@@ -266,15 +266,25 @@ def handle_search(query: str, verbose: bool = False) -> int:
         sys.stdout.write(f"Location:  {plan.get('city') or 'N/A'}, {plan.get('state') or 'N/A'}\n")
         sys.stdout.write(f"Topics:    {', '.join(plan.get('evidence_topics', []))}\n\n")
 
-        sys.stdout.write("--- [Stage 2: Provider Retrieval (Fixtures)] ---\n")
-        for p in providers:
-            sys.stdout.write(
-                f"- {p.name} | {p.specialty} | {p.facility_name} "
-                f"({p.city}, {p.state}) [NPI: {p.npi}]\n"
-            )
+        retriever_used = state.get("execution_metadata", {}).get(
+            "provider_retriever", "ProviderRetriever"
+        )
+        sys.stdout.write(f"--- [Stage 2: Provider Retrieval ({retriever_used})] ---\n")
+        if providers:
+            for p in providers:
+                status_str = "FIXTURE" if p.is_synthetic else "LIVE NPPES"
+                addr = f" | Addr: {p.practice_address}" if p.practice_address else ""
+                phone = f" | Phone: {p.telephone}" if p.telephone else ""
+                ts = f" | Timestamp: {p.retrieval_timestamp}" if p.retrieval_timestamp else ""
+                sys.stdout.write(
+                    f"- [{status_str}] {p.name} | {p.specialty} | {p.facility_name} "
+                    f"({p.city}, {p.state}) [NPI: {p.npi}]{addr}{phone}{ts}\n"
+                )
+        else:
+            sys.stdout.write("(No provider candidates retrieved)\n")
         sys.stdout.write("\n")
 
-        sys.stdout.write("--- [Stage 3: Evidence Retrieval (Fixtures)] ---\n")
+        sys.stdout.write("--- [Stage 3: Evidence Retrieval (Simulated Fixtures)] ---\n")
         for e in evidence:
             sys.stdout.write(f"- [{e.source}] {e.title} ({e.year})\n")
         sys.stdout.write("\n")
@@ -283,7 +293,10 @@ def handle_search(query: str, verbose: bool = False) -> int:
         valid_str = "VALID" if validation.get("is_valid") else "INVALID"
         sys.stdout.write(f"Status:             {valid_str}\n")
         sys.stdout.write(f"Duplicates Checked: {validation.get('duplicate_providers_found', 0)}\n")
-        sys.stdout.write(f"Provenance OK:      {validation.get('provenance_verified')}\n\n")
+        sys.stdout.write(f"Provenance OK:      {validation.get('provenance_verified')}\n")
+        if validation.get("unsupported_claims"):
+            sys.stdout.write(f"Warnings:           {', '.join(validation['unsupported_claims'])}\n")
+        sys.stdout.write("\n")
 
     sys.stdout.write("--- [Stage 5: Synthesized Discovery Result] ---\n")
     sys.stdout.write(f"{final_answer}\n\n")
@@ -295,7 +308,16 @@ def handle_search(query: str, verbose: bool = False) -> int:
             sys.stdout.write(f"- {c}\n")
         sys.stdout.write("\n")
 
-    sys.stdout.write("[Notice: Data retrieved from synthetic test fixtures for demonstration.]\n")
+    has_live = any(not p.is_synthetic for p in providers)
+    if has_live:
+        sys.stdout.write(
+            "[Notice: Provider records retrieved live from the public CMS NPPES Registry API v2.1. "
+            "Biomedical and patient education evidence remain simulated fixtures for M4A.]\n"
+        )
+    else:
+        sys.stdout.write(
+            "[Notice: Data retrieved from synthetic test fixtures for demonstration.]\n"
+        )
     return 0
 
 

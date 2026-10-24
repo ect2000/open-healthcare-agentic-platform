@@ -12,6 +12,12 @@ from healthcare_agents.retrieval.fixtures import (
     FixtureEvidenceRetriever,
     FixtureProviderRetriever,
 )
+from healthcare_agents.retrieval.nppes_client import (
+    NPPESClientError,
+    NPPESConnectionError,
+    NPPESProviderRetriever,
+    NPPESResponseError,
+)
 
 __all__ = [
     "SYNTHETIC_EVIDENCE",
@@ -21,5 +27,9 @@ __all__ = [
     "ClinicalEvidenceRecord",
     "FixtureEvidenceRetriever",
     "FixtureProviderRetriever",
+    "NPPESClientError",
+    "NPPESConnectionError",
+    "NPPESProviderRetriever",
+    "NPPESResponseError",
     "ProviderRecord",
 ]

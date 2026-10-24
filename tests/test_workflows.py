@@ -210,16 +210,19 @@ def test_answer_agent_deterministic_synthesis() -> None:
 
     assert "Dr. Jane Smith, DDS" in result["final_answer"]
     assert "Early Caries Prevention" in result["final_answer"]
-    assert "synthetic test fixtures" in result["final_answer"]
+    assert "demonstration fixtures" in result["final_answer"].lower()
 
 
 def test_healthcare_graph_compilation_and_execution() -> None:
     """Verify full LangGraph StateGraph executes offline from START to END."""
-    graph_builder = create_healthcare_graph()
+    graph_builder = create_healthcare_graph(provider_retriever=FixtureProviderRetriever())
     app = graph_builder.compile()
     assert app is not None
 
-    result = run_healthcare_workflow(query="Find pediatric dentists in Houston")
+    result = run_healthcare_workflow(
+        query="Find pediatric dentists in Houston",
+        provider_retriever=FixtureProviderRetriever(),
+    )
 
     assert result["request_id"] is not None
     assert result["search_plan"]["city"] == "Houston"

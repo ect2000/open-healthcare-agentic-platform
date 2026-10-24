@@ -7,18 +7,27 @@ import pytest
 from healthcare_agents.cli import handle_search, main
 
 
-def test_cli_search_success_basic(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_search_success_basic(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify search command prints expected sections."""
+    monkeypatch.setenv("RETRIEVAL_MODE", "fixture")
     code = main(["search", "--query", "Find pediatric dentists in Houston"])
     assert code == 0
     captured = capsys.readouterr()
     assert "HEALTHCARE MULTI-AGENT WORKFLOW" in captured.out
     assert "Dr. Jane Smith, DDS" in captured.out
-    assert "synthetic test fixtures" in captured.out
+    assert (
+        "synthetic test fixtures" in captured.out.lower()
+        or "demonstration fixtures" in captured.out.lower()
+    )
 
 
-def test_cli_search_verbose_mode(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_search_verbose_mode(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify search command in verbose mode outputs all agent stages."""
+    monkeypatch.setenv("RETRIEVAL_MODE", "fixture")
     code = main(["search", "--query", "Find pediatric dentists in Houston", "--verbose"])
     assert code == 0
     captured = capsys.readouterr()

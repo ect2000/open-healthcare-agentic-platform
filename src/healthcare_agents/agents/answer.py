@@ -29,14 +29,17 @@ def format_context(state: HealthcareWorkflowState) -> str:
 
     lines: list[str] = [
         f"USER QUERY: {state.get('original_query', '')}",
-        "\n--- VALIDATED PROVIDER CANDIDATES (SYNTHETIC FIXTURES) ---",
+        "\n--- VALIDATED PROVIDER CANDIDATES ---",
     ]
 
     if providers:
         for p in providers:
+            prov_type = "DEMO FIXTURE" if p.is_synthetic else "LIVE REGISTRY"
+            practice_info = f" | Practice: {p.practice_address}" if p.practice_address else ""
             lines.append(
-                f"- {p.name} | Specialty: {p.specialty} | Facility: {p.facility_name} "
-                f"| Location: {p.city}, {p.state} | Source: {p.source} (NPI: {p.npi})"
+                f"- [{prov_type}] {p.name} | Specialty: {p.specialty} "
+                f"| Location: {p.city}, {p.state}{practice_info} "
+                f"| Source: {p.source} (NPI: {p.npi})"
             )
     else:
         lines.append("(No provider candidates retrieved)")
@@ -99,20 +102,24 @@ def synthesize_answer(
 
         summary_parts: list[str] = [
             f'**Healthcare Discovery Summary for:** *"{state.get("original_query", "")}"*\n',
-            "### Recommended Provider Candidates (Demonstration Test Data)",
+            "### Candidate Healthcare Providers",
         ]
 
         if providers:
             for p in providers:
+                status_label = "Demonstration Fixture" if p.is_synthetic else "Live NPPES Registry"
+                addr_info = (
+                    f"\n  - Practice Address: {p.practice_address}" if p.practice_address else ""
+                )
                 summary_parts.append(
-                    f"- **{p.name}** ({p.specialty})\n"
-                    f"  - Facility: {p.facility_name} ({p.city}, {p.state})\n"
-                    f"  - Source Provenance: {p.source} (NPI: `{p.npi}`)"
+                    f"- **{p.name}** ({p.specialty}) [{status_label}]\n"
+                    f"  - Entity: {p.entity_type} | Location: {p.city}, {p.state}{addr_info}\n"
+                    f"  - Source: {p.source} (NPI: `{p.npi}`)"
                 )
         else:
-            summary_parts.append("- No matching providers found in demonstration fixtures.")
+            summary_parts.append("- No matching providers found.")
 
-        summary_parts.append("\n### Supporting Evidence & Clinical Literature")
+        summary_parts.append("\n### Supporting Evidence & Clinical Literature (Simulated Fixtures)")
         if evidence:
             for e in evidence:
                 summary_parts.append(
@@ -121,9 +128,17 @@ def synthesize_answer(
         else:
             summary_parts.append("- No relevant clinical evidence records retrieved.")
 
+        has_live = any(not p.is_synthetic for p in providers)
+        prov_notice = (
+            "Provider records retrieved live from the public CMS NPPES registry."
+            if has_live
+            else "Provider records are demonstration test fixtures."
+        )
         summary_parts.append(
-            "\n*Notice: All provider and evidence records displayed above are "
-            "synthetic test fixtures. Always consult a licensed medical clinician for advice.*"
+            f"\n*Notice: {prov_notice} Research and patient education evidence remain "
+            "simulated demonstration fixtures for M4A. An NPI is an administrative identifier and "
+            "not proof of clinical competence, licensing status, or quality. "
+            "Always consult a licensed clinician.*"
         )
         final_answer = "\n".join(summary_parts)
 
