@@ -10,7 +10,8 @@ import pytest
 
 from healthcare_agents.models import OllamaAdapter
 
-LIVE_TEST_ENABLED = os.environ.get("HEALTHCARE_AGENTS_LIVE_TESTS", "1") == "1"
+# Live tests are opt-in so offline test suites and standard CI pass without local Ollama daemon
+LIVE_TEST_ENABLED = os.environ.get("HEALTHCARE_AGENTS_LIVE_TESTS", "0") == "1"
 
 
 @pytest.mark.skipif(not LIVE_TEST_ENABLED, reason="Live tests disabled by environment variable")
