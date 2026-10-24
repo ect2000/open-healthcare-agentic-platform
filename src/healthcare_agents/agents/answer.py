@@ -172,11 +172,20 @@ def synthesize_answer(
                 "public reporting programs, not low clinical quality.)*"
             )
 
-        summary_parts.append("\n### Patient Education Evidence (Simulated Fixtures)")
+        has_live_edu = any(not e.is_synthetic for e in patient_education)
+        edu_heading = (
+            "### Patient Education & Consumer Health (Live MedlinePlus)"
+            if has_live_edu
+            else "### Patient Education & Consumer Health (Simulated Fixtures)"
+        )
+        summary_parts.append(f"\n{edu_heading}")
         if patient_education:
             for e in patient_education:
+                target_url = e.official_url or e.pubmed_url
+                url_str = f"\n  - Official URL: {target_url}" if target_url else ""
                 summary_parts.append(
                     f"- **{e.title}** ({e.year})\n  - {e.summary}\n  - Citation: `{e.citation_ref}`"
+                    f"{url_str}"
                 )
         else:
             summary_parts.append("- No patient education topics retrieved.")
@@ -194,17 +203,22 @@ def synthesize_answer(
             else "Research evidence retrieved from demonstration test fixtures."
         )
         cms_notice = (
-            "Quality and performance data retrieved from CMS Provider Data Catalog."
+            "Quality and performance data evaluated against CMS Provider Data Catalog."
             if has_live_cms
             else "Quality measures evaluated against CMS Provider Data Catalog."
         )
+        edu_notice = (
+            "Patient education resources retrieved live from U.S. NLM MedlinePlus."
+            if has_live_edu
+            else "Patient education resources retrieved from demonstration test fixtures."
+        )
         summary_parts.append(
-            f"\n*Notice: {prov_notice} {pub_notice} {cms_notice} "
-            "Patient education evidence (MedlinePlus) remains simulated fixtures for M4C. "
+            f"\n*Notice: {prov_notice} {pub_notice} {cms_notice} {edu_notice} "
             "An NPI is an administrative identifier and not proof of licensure or competence; "
             "a PubMed citation establishes literature publication and does not substitute for "
             "individualized medical advice; absence of CMS quality scores does not denote low "
-            "quality. Always consult a licensed clinician.*"
+            "quality; MedlinePlus provides general consumer health information and does not "
+            "constitute clinical diagnosis or treatment. Always consult a licensed clinician.*"
         )
         final_answer = "\n".join(summary_parts)
 

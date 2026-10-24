@@ -254,3 +254,66 @@ def test_validator_cms_quality_and_npi_matching() -> None:
     assert any("Absence of CMS quality measures" in note for note in val["notes"])
     # Verify note on preserving unmatched CMS records
     assert any("Preserved 1 unmatched CMS record" in note for note in val["notes"])
+
+
+def test_validator_medlineplus_url_and_guardrails() -> None:
+    """Verify validator checks official MedlinePlus URLs and notes consumer health guardrail."""
+    valid_mlp = ClinicalEvidenceRecord(
+        record_id="MEDLINE-1",
+        title="Child Dental Health",
+        source="MedlinePlus-Live",
+        summary="Overview of child teeth care.",
+        evidence_type="patient_education",
+        year=2026,
+        is_synthetic=False,
+        citation_ref="MedlinePlus:childdentalhealth",
+        official_url="https://medlineplus.gov/childdentalhealth.html",
+    )
+    invalid_url_mlp = ClinicalEvidenceRecord(
+        record_id="MEDLINE-BAD",
+        title="Suspicious Health Advice",
+        source="MedlinePlus-Live",
+        summary="Unverified claim.",
+        evidence_type="patient_education",
+        year=2026,
+        is_synthetic=False,
+        citation_ref="MedlinePlus:bad",
+        official_url="https://unauthorized-domain.com/bad.html",
+    )
+
+    state: HealthcareWorkflowState = {
+        "provider_candidates": [],
+        "clinical_evidence": [],
+        "patient_education_evidence": [valid_mlp, invalid_url_mlp],
+    }
+    res = validate_records(state)
+    val = res["validation_results"]
+
+    assert any("non-official MedlinePlus URL" in claim for claim in val["unsupported_claims"])
+    assert any(
+        "Patient education resources from MedlinePlus provide consumer health context" in note
+        for note in val["notes"]
+    )
+
+
+def test_evidence_agent_error_handling() -> None:
+    """Verify evidence agent gracefully captures retriever exceptions."""
+    from healthcare_agents.agents.evidence import retrieve_evidence
+
+    mock_ev = MagicMock()
+    mock_ev.search_evidence.side_effect = RuntimeError("PubMed down")
+    mock_edu = MagicMock()
+    mock_edu.search_topics.side_effect = RuntimeError("MedlinePlus down")
+
+    state: HealthcareWorkflowState = {
+        "original_query": "Pediatric dental anxiety",
+        "search_plan": {"evidence_topics": ["pediatric dental anxiety"]},
+    }
+    res = retrieve_evidence(
+        state,
+        evidence_retriever=mock_ev,
+        patient_education_retriever=mock_edu,
+    )
+    assert len(res["errors"]) == 2
+    assert any("PubMed down" in e for e in res["errors"])
+    assert any("MedlinePlus down" in e for e in res["errors"])

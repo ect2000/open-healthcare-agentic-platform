@@ -44,6 +44,11 @@ class Settings:
     cms_api_url: str
     cms_timeout_seconds: float
     cms_max_retries: int
+    medlineplus_api_url: str
+    medlineplus_connect_url: str
+    medlineplus_timeout_seconds: float
+    medlineplus_cache_ttl_seconds: float
+    medlineplus_max_retries: int
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -198,6 +203,55 @@ class Settings:
                 f"Invalid CMS_MAX_RETRIES '{raw_cms_retries}'. Must be a non-negative integer."
             ) from None
 
+        medlineplus_api_url = source.get(
+            "MEDLINEPLUS_API_URL", "https://wsearch.nlm.nih.gov/ws/query"
+        ).strip()
+        if not medlineplus_api_url.startswith(("http://", "https://")):
+            raise ConfigurationError(
+                f"Invalid MEDLINEPLUS_API_URL '{medlineplus_api_url}'. Must start with http:// or https://."
+            )
+
+        medlineplus_connect_url = source.get(
+            "MEDLINEPLUS_CONNECT_URL", "https://connect.medlineplus.gov/service"
+        ).strip()
+        if not medlineplus_connect_url.startswith(("http://", "https://")):
+            raise ConfigurationError(
+                f"Invalid MEDLINEPLUS_CONNECT_URL '{medlineplus_connect_url}'. "
+                "Must start with http:// or https://."
+            )
+
+        raw_mlp_timeout = source.get("MEDLINEPLUS_TIMEOUT_SECONDS", "10.0")
+        try:
+            medlineplus_timeout_seconds = float(raw_mlp_timeout)
+            if medlineplus_timeout_seconds <= 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid MEDLINEPLUS_TIMEOUT_SECONDS '{raw_mlp_timeout}'. "
+                "Must be a positive number."
+            ) from None
+
+        raw_mlp_ttl = source.get("MEDLINEPLUS_CACHE_TTL_SECONDS", "43200.0")
+        try:
+            medlineplus_cache_ttl_seconds = float(raw_mlp_ttl)
+            if medlineplus_cache_ttl_seconds <= 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid MEDLINEPLUS_CACHE_TTL_SECONDS '{raw_mlp_ttl}'. Must be a positive number."
+            ) from None
+
+        raw_mlp_retries = source.get("MEDLINEPLUS_MAX_RETRIES", "3")
+        try:
+            medlineplus_max_retries = int(raw_mlp_retries)
+            if medlineplus_max_retries < 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid MEDLINEPLUS_MAX_RETRIES '{raw_mlp_retries}'. "
+                "Must be a non-negative integer."
+            ) from None
+
         return cls(
             app_name=app_name,
             environment=environment,
@@ -219,6 +273,11 @@ class Settings:
             cms_api_url=cms_api_url,
             cms_timeout_seconds=cms_timeout_seconds,
             cms_max_retries=cms_max_retries,
+            medlineplus_api_url=medlineplus_api_url,
+            medlineplus_connect_url=medlineplus_connect_url,
+            medlineplus_timeout_seconds=medlineplus_timeout_seconds,
+            medlineplus_cache_ttl_seconds=medlineplus_cache_ttl_seconds,
+            medlineplus_max_retries=medlineplus_max_retries,
         )
 
 

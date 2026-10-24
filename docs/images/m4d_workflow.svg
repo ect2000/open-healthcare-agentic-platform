@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 405" width="100%" height="100%">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="liveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="pubmedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="cmsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="mlpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="valGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="ansGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feOffset dx="0" dy="4"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.15"/></feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#f8fafc" rx="12"/>
+  <rect width="100%" height="100%" fill="none" stroke="#e2e8f0" stroke-width="2" rx="12"/>
+
+  <!-- Title & Subtitle -->
+  <text x="30" y="36" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">LangGraph 4-Source Healthcare Discovery Architecture (Milestone M4D)</text>
+  <text x="30" y="56" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">Live NPPES v2.1 + Live PubMed E-utilities + Live CMS Provider Data + Live NLM MedlinePlus + Grounded Gemma 4</text>
+
+  <!-- Node: User Query -->
+  <g transform="translate(30, 125)" filter="url(#shadow)">
+    <rect width="120" height="110" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <rect width="120" height="8" rx="4" fill="#64748b"/>
+    <text x="60" y="44" font-family="sans-serif" font-size="13" font-weight="700" fill="#1e293b" text-anchor="middle">User Query</text>
+    <text x="60" y="66" font-family="sans-serif" font-size="10" fill="#64748b" text-anchor="middle">CLI / API input</text>
+    <text x="60" y="86" font-family="sans-serif" font-size="9" fill="#0284c7" text-anchor="middle">Specialty, Research,</text>
+    <text x="60" y="100" font-family="sans-serif" font-size="9" fill="#0284c7" text-anchor="middle">Patient Education</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="150" y1="180" x2="185" y2="180" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node: Planner Agent -->
+  <g transform="translate(190, 115)" filter="url(#shadow)">
+    <rect width="145" height="130" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+    <rect width="145" height="8" rx="4" fill="url(#primaryGrad)"/>
+    <text x="72" y="36" font-family="sans-serif" font-size="13" font-weight="700" fill="#1e3a8a" text-anchor="middle">1. Planner Agent</text>
+    <text x="72" y="56" font-family="sans-serif" font-size="10" font-weight="600" fill="#3b82f6" text-anchor="middle">Gemma 4 (Ollama)</text>
+    <text x="72" y="78" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">Specialty &amp; City/State</text>
+    <text x="72" y="96" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">PubMed Research Topics</text>
+    <text x="72" y="112" font-family="sans-serif" font-size="9.5" fill="#475569" text-anchor="middle">MedlinePlus Education Topics</text>
+    <text x="72" y="126" font-family="sans-serif" font-size="8.5" fill="#94a3b8" text-anchor="middle">Structured SearchPlan</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="335" y1="180" x2="370" y2="180" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Subgraph: 4 Live Retrieval Sources -->
+  <g transform="translate(375, 70)">
+    <rect width="215" height="225" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+    <text x="107" y="18" font-family="sans-serif" font-size="11" font-weight="700" fill="#0f766e" text-anchor="middle">2. Retrieval Stage (4 Live Sources)</text>
+
+    <!-- Source 1: LIVE NPPES -->
+    <rect x="10" y="25" width="195" height="42" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.5"/>
+    <rect x="10" y="25" width="195" height="4" rx="2" fill="url(#liveGrad)"/>
+    <text x="107" y="42" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#065f46" text-anchor="middle">LIVE NPPES Registry v2.1</text>
+    <text x="107" y="58" font-family="sans-serif" font-size="8" font-weight="600" fill="#047857" text-anchor="middle">Active 10-Digit NPI &amp; Practice Address</text>
+
+    <!-- Source 2: LIVE PUBMED -->
+    <rect x="10" y="72" width="195" height="42" rx="6" fill="#ffffff" stroke="#0891b2" stroke-width="1.5"/>
+    <rect x="10" y="72" width="195" height="4" rx="2" fill="url(#pubmedGrad)"/>
+    <text x="107" y="89" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#0e7490" text-anchor="middle">LIVE PubMed E-utilities</text>
+    <text x="107" y="105" font-family="sans-serif" font-size="8" font-weight="600" fill="#0891b2" text-anchor="middle">Biomedical Studies &amp; Systematic Reviews</text>
+
+    <!-- Source 3: LIVE CMS PROVIDER DATA -->
+    <rect x="10" y="119" width="195" height="46" rx="6" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>
+    <rect x="10" y="119" width="195" height="4" rx="2" fill="url(#cmsGrad)"/>
+    <text x="107" y="136" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#0369a1" text-anchor="middle">LIVE CMS Quality Catalog</text>
+    <text x="107" y="151" font-family="sans-serif" font-size="8" font-weight="600" fill="#0284c7" text-anchor="middle">MIPS Quality &amp; Hospital Stars</text>
+    <text x="107" y="161" font-family="sans-serif" font-size="7.5" fill="#64748b" text-anchor="middle">Exact NPI &amp; Facility Joins</text>
+
+    <!-- Source 4: LIVE MEDLINEPLUS -->
+    <rect x="10" y="170" width="195" height="46" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.5"/>
+    <rect x="10" y="170" width="195" height="4" rx="2" fill="url(#mlpGrad)"/>
+    <text x="107" y="187" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#5b21b6" text-anchor="middle">LIVE NLM MedlinePlus</text>
+    <text x="107" y="202" font-family="sans-serif" font-size="8" font-weight="600" fill="#7c3aed" text-anchor="middle">Consumer Health Topics (EN &amp; ES)</text>
+    <text x="107" y="212" font-family="sans-serif" font-size="7.5" fill="#64748b" text-anchor="middle">Official URLs, Summaries &amp; Connect</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="590" y1="180" x2="625" y2="180" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node: Validator Component -->
+  <g transform="translate(630, 95)" filter="url(#shadow)">
+    <rect width="155" height="170" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+    <rect width="155" height="8" rx="4" fill="url(#valGrad)"/>
+    <text x="77" y="32" font-family="sans-serif" font-size="13" font-weight="700" fill="#b45309" text-anchor="middle">3. Validator</text>
+    <text x="77" y="50" font-family="sans-serif" font-size="10" font-weight="600" fill="#d97706" text-anchor="middle">Deterministic Guardrails</text>
+    <text x="77" y="72" font-family="sans-serif" font-size="8.5" fill="#475569" text-anchor="middle">NPI &amp; PMID Syntactic Verif</text>
+    <text x="77" y="89" font-family="sans-serif" font-size="8.5" fill="#475569" text-anchor="middle">Official MedlinePlus URLs</text>
+    <text x="77" y="106" font-family="sans-serif" font-size="8.5" fill="#475569" text-anchor="middle">CMS Exact NPI Match</text>
+    <text x="77" y="123" font-family="sans-serif" font-size="8.5" fill="#475569" text-anchor="middle">Clinical Independence Rule</text>
+    <text x="77" y="140" font-family="sans-serif" font-size="8" fill="#94a3b8" text-anchor="middle">Consumer != Scientific Study</text>
+    <text x="77" y="155" font-family="sans-serif" font-size="8" fill="#047857" font-weight="600" text-anchor="middle">Multi-Source Provenance</text>
+  </g>
+
+  <!-- Arrow 4 -->
+  <line x1="785" y1="180" x2="820" y2="180" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node: Answer Agent & Result -->
+  <g transform="translate(825, 95)" filter="url(#shadow)">
+    <rect width="135" height="170" rx="8" fill="#ffffff" stroke="#6366f1" stroke-width="2"/>
+    <rect width="135" height="8" rx="4" fill="url(#ansGrad)"/>
+    <text x="67" y="32" font-family="sans-serif" font-size="13" font-weight="700" fill="#4338ca" text-anchor="middle">4. Answer Agent</text>
+    <text x="67" y="50" font-family="sans-serif" font-size="10" font-weight="600" fill="#6366f1" text-anchor="middle">Gemma 4 Synthesis</text>
+    <text x="67" y="70" font-family="sans-serif" font-size="9" fill="#475569" text-anchor="middle">4 Distinct Sections:</text>
+    <text x="67" y="87" font-family="sans-serif" font-size="8.5" fill="#047857" text-anchor="middle">A. NPPES Providers</text>
+    <text x="67" y="102" font-family="sans-serif" font-size="8.5" fill="#0e7490" text-anchor="middle">B. PubMed Research</text>
+    <text x="67" y="117" font-family="sans-serif" font-size="8.5" fill="#0284c7" text-anchor="middle">C. CMS Quality Data</text>
+    <text x="67" y="132" font-family="sans-serif" font-size="8.5" fill="#7c3aed" text-anchor="middle">D. MedlinePlus Education</text>
+    <text x="67" y="152" font-family="sans-serif" font-size="8" fill="#10b981" font-weight="600" text-anchor="middle">100% Grounded Output</text>
+  </g>
+
+  <!-- Footer note -->
+  <g transform="translate(30, 320)">
+    <rect width="930" height="66" rx="6" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1"/>
+    <text x="20" y="22" font-family="sans-serif" font-size="11" fill="#0369a1" font-weight="600">
+      * Milestone M4D completes full live integration of all four authoritative public healthcare data sources:
+    </text>
+    <text x="20" y="38" font-family="sans-serif" font-size="9.5" fill="#0284c7">
+      1. CMS NPPES Registry (Live NPI discovery) | 2. NCBI PubMed E-utilities (Live biomedical research) | 3. CMS Provider Data (Live MIPS &amp; Hospital Stars) | 4. NLM MedlinePlus (Live consumer topics).
+    </text>
+    <text x="20" y="52" font-family="sans-serif" font-size="9" fill="#0284c7">
+      Acceptable Use Enforced: MedlinePlus throttled to &lt;85 req/min with thread-safe 12h caching. Provider claims require provider evidence; patient education is never cited as research or credential.
+    </text>
+  </g>
+</svg>

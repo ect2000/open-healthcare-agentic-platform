@@ -84,6 +84,16 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
                 f"Evidence record {e.record_id} has invalid PubMed URL '{e.pubmed_url}'."
             )
 
+        # Validate official MedlinePlus URL if provided
+        if e.official_url and not (
+            e.official_url.startswith("https://medlineplus.gov/")
+            or e.official_url.startswith("https://medlineplus.gov/spanish/")
+        ):
+            unsupported_claims.append(
+                f"Patient education record {e.record_id} has "
+                f"non-official MedlinePlus URL '{e.official_url}'."
+            )
+
         if e.record_id in seen_evidence_ids:
             notes.append(f"Duplicate evidence record: {e.record_id}")
         else:
@@ -100,6 +110,14 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
         if not e.source:
             provenance_verified = False
             unsupported_claims.append(f"Evidence {e.title} has no verifiable source provenance.")
+
+    # Guardrail: Patient education resources must not be cited as original scientific research
+    # or provider qualifications.
+    if patient_education:
+        notes.append(
+            "Patient education resources from MedlinePlus provide consumer health context; "
+            "they are not primary biomedical research publications or clinician credentials."
+        )
 
     # 4. CMS Quality Records validation and NPI match verification
     cms_quality = state.get("cms_quality", [])

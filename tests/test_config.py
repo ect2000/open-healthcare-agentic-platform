@@ -87,3 +87,42 @@ def test_settings_invalid_timeout_error() -> None:
 
     with pytest.raises(ConfigurationError, match="Invalid MODEL_TIMEOUT_SECONDS"):
         Settings.from_env({"MODEL_TIMEOUT_SECONDS": "not_a_number"})
+
+
+def test_settings_medlineplus_configuration() -> None:
+    """Verify MedlinePlus default values and custom overrides."""
+    default_settings = Settings.from_env({})
+    assert default_settings.medlineplus_api_url == "https://wsearch.nlm.nih.gov/ws/query"
+    assert default_settings.medlineplus_connect_url == "https://connect.medlineplus.gov/service"
+    assert default_settings.medlineplus_timeout_seconds == 10.0
+    assert default_settings.medlineplus_cache_ttl_seconds == 43200.0
+    assert default_settings.medlineplus_max_retries == 3
+
+    custom_env = {
+        "MEDLINEPLUS_API_URL": "https://custom.nlm.nih.gov/ws",
+        "MEDLINEPLUS_CONNECT_URL": "https://custom.connect.nlm.nih.gov/service",
+        "MEDLINEPLUS_TIMEOUT_SECONDS": "20.5",
+        "MEDLINEPLUS_CACHE_TTL_SECONDS": "86400",
+        "MEDLINEPLUS_MAX_RETRIES": "5",
+    }
+    custom_settings = Settings.from_env(custom_env)
+    assert custom_settings.medlineplus_api_url == "https://custom.nlm.nih.gov/ws"
+    assert custom_settings.medlineplus_connect_url == "https://custom.connect.nlm.nih.gov/service"
+    assert custom_settings.medlineplus_timeout_seconds == 20.5
+    assert custom_settings.medlineplus_cache_ttl_seconds == 86400.0
+    assert custom_settings.medlineplus_max_retries == 5
+
+    with pytest.raises(ConfigurationError, match="Invalid MEDLINEPLUS_API_URL"):
+        Settings.from_env({"MEDLINEPLUS_API_URL": "ftp://bad-url"})
+
+    with pytest.raises(ConfigurationError, match="Invalid MEDLINEPLUS_CONNECT_URL"):
+        Settings.from_env({"MEDLINEPLUS_CONNECT_URL": "ftp://bad-url"})
+
+    with pytest.raises(ConfigurationError, match="Invalid MEDLINEPLUS_TIMEOUT_SECONDS"):
+        Settings.from_env({"MEDLINEPLUS_TIMEOUT_SECONDS": "-1"})
+
+    with pytest.raises(ConfigurationError, match="Invalid MEDLINEPLUS_CACHE_TTL_SECONDS"):
+        Settings.from_env({"MEDLINEPLUS_CACHE_TTL_SECONDS": "abc"})
+
+    with pytest.raises(ConfigurationError, match="Invalid MEDLINEPLUS_MAX_RETRIES"):
+        Settings.from_env({"MEDLINEPLUS_MAX_RETRIES": "-2"})

@@ -10,6 +10,7 @@ from collections.abc import Sequence
 
 from healthcare_agents.retrieval.base import (
     BaseEvidenceRetriever,
+    BasePatientEducationRetriever,
     BaseProviderRetriever,
     BaseQualityRetriever,
     ClinicalEvidenceRecord,
@@ -243,4 +244,35 @@ class FixtureQualityRetriever(BaseQualityRetriever):
             matches.append(r)
             if len(matches) >= limit:
                 break
+        return matches
+
+
+class FixturePatientEducationRetriever(BasePatientEducationRetriever):
+    """Deterministic patient education retriever querying synthetic MedlinePlus fixtures."""
+
+    def __init__(self, records: Sequence[ClinicalEvidenceRecord] | None = None) -> None:
+        self._records = [
+            r
+            for r in (records if records is not None else SYNTHETIC_EVIDENCE)
+            if r.evidence_type == "patient_education"
+        ]
+
+    def search_topics(
+        self,
+        keyword: str,
+        language: str = "en",
+        limit: int = 5,
+    ) -> Sequence[ClinicalEvidenceRecord]:
+        matches: list[ClinicalEvidenceRecord] = []
+        words = set(keyword.lower().split())
+        for e in self._records:
+            text = f"{e.title} {e.summary}".lower()
+            if any(w in text for w in words if len(w) > 3):
+                matches.append(e)
+            elif not keyword:
+                matches.append(e)
+            if len(matches) >= limit:
+                break
+        if not matches:
+            matches = self._records[:limit]
         return matches

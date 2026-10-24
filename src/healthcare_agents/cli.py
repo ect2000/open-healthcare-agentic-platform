@@ -287,11 +287,22 @@ def handle_search(query: str, verbose: bool = False) -> int:
         ev_retriever = state.get("execution_metadata", {}).get(
             "evidence_retriever", "EvidenceRetriever"
         )
-        sys.stdout.write(f"--- [Stage 3: Evidence Retrieval ({ev_retriever})] ---\n")
+        edu_retriever = state.get("execution_metadata", {}).get(
+            "patient_education_retriever", "EducationRetriever"
+        )
+        sys.stdout.write(
+            f"--- [Stage 3: Evidence Retrieval ({ev_retriever} / {edu_retriever})] ---\n"
+        )
         if evidence:
             for e in evidence:
-                status_str = "FIXTURE" if e.is_synthetic else "LIVE PUBMED"
-                url_str = f" | URL: {e.pubmed_url}" if e.pubmed_url else ""
+                if e.is_synthetic:
+                    status_str = "FIXTURE"
+                elif "MedlinePlus" in e.source:
+                    status_str = "LIVE MEDLINEPLUS"
+                else:
+                    status_str = "LIVE PUBMED"
+                url_val = e.official_url or e.pubmed_url
+                url_str = f" | URL: {url_val}" if url_val else ""
                 auth_str = f" | Authors: {', '.join(e.authors[:2])}" if e.authors else ""
                 sys.stdout.write(
                     f"- [{status_str}] {e.title} ({e.year}) [{e.citation_ref}]{auth_str}{url_str}\n"
@@ -345,15 +356,22 @@ def handle_search(query: str, verbose: bool = False) -> int:
     has_live_prov = any(not p.is_synthetic for p in providers)
     has_live_pubmed = any(not e.is_synthetic for e in evidence if e.source == "PubMed-Live")
     has_live_cms = any(not q.is_synthetic for q in state.get("cms_quality", []))
+    has_live_mlp = any(not e.is_synthetic for e in state.get("patient_education_evidence", []))
+
     if has_live_prov and has_live_pubmed:
         cms_desc = (
             "CMS Provider Data Catalog" if has_live_cms else "CMS Provider Data Catalog evaluated"
+        )
+        mlp_desc = (
+            "Patient education retrieved live from U.S. NLM MedlinePlus Web Service."
+            if has_live_mlp
+            else "Patient education retrieved from demonstration test fixtures."
         )
         sys.stdout.write(
             f"[Notice: Provider records retrieved live from CMS NPPES Registry API v2.1. "
             f"Biomedical literature retrieved live from NCBI Entrez PubMed. "
             f"Quality measures retrieved live from {cms_desc}. "
-            f"Patient education evidence (MedlinePlus) remains simulated fixtures for M4C.]\n"
+            f"{mlp_desc}]\n"
         )
     elif has_live_prov:
         sys.stdout.write(

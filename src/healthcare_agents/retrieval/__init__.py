@@ -2,6 +2,7 @@
 
 from healthcare_agents.retrieval.base import (
     BaseEvidenceRetriever,
+    BasePatientEducationRetriever,
     BaseProviderRetriever,
     BaseQualityRetriever,
     ClinicalEvidenceRecord,
@@ -20,8 +21,15 @@ from healthcare_agents.retrieval.fixtures import (
     SYNTHETIC_PROVIDERS,
     SYNTHETIC_QUALITY,
     FixtureEvidenceRetriever,
+    FixturePatientEducationRetriever,
     FixtureProviderRetriever,
     FixtureQualityRetriever,
+)
+from healthcare_agents.retrieval.medlineplus_client import (
+    MedlinePlusClientError,
+    MedlinePlusConnectionError,
+    MedlinePlusPatientEducationRetriever,
+    MedlinePlusResponseError,
 )
 from healthcare_agents.retrieval.nppes_client import (
     NPPESClientError,
@@ -41,6 +49,7 @@ __all__ = [
     "SYNTHETIC_PROVIDERS",
     "SYNTHETIC_QUALITY",
     "BaseEvidenceRetriever",
+    "BasePatientEducationRetriever",
     "BaseProviderRetriever",
     "BaseQualityRetriever",
     "CMSClientError",
@@ -51,8 +60,13 @@ __all__ = [
     "CMSResponseError",
     "ClinicalEvidenceRecord",
     "FixtureEvidenceRetriever",
+    "FixturePatientEducationRetriever",
     "FixtureProviderRetriever",
     "FixtureQualityRetriever",
+    "MedlinePlusClientError",
+    "MedlinePlusConnectionError",
+    "MedlinePlusPatientEducationRetriever",
+    "MedlinePlusResponseError",
     "NPPESClientError",
     "NPPESConnectionError",
     "NPPESProviderRetriever",

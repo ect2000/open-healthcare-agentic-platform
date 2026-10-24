@@ -68,14 +68,18 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Rate-limiting (3 req/s without key, 10 req/s with key) and exponential backoff retry.
   - Deterministic validation of PMID format, PubMed URLs, duplicate detection, and research independence guardrails.
   - Grounded Gemma 4 synthesis citing real NPPES providers and real PubMed literature.
-- [x] **Milestone M4C — CMS Provider Data Quality Metrics & Affiliations** *(Current)*:
+- [x] **Milestone M4C — CMS Provider Data Quality Metrics & Affiliations**:
   - Official CMS Provider Data Catalog client (`src/healthcare_agents/retrieval/cms_client.py`).
   - Clinician MIPS quality measures (`a174-a962`), hospital general information and star ratings (`xubh-q36u`), and facility affiliations (`27ea-46a8`).
   - Safe, exact NPI-based joins against candidate providers; unmatched CMS records kept strictly unjoined.
   - PubMed query refinement (`[Title/Abstract]` and `[MeSH Terms]`) and deterministic title/abstract relevance safeguards preventing unrelated study retrieval.
   - Quality guardrails: missing CMS quality data explicitly documented as lack of public program scope (e.g. dentistry), never low quality.
-- [ ] **Milestone M4D — MedlinePlus Consumer Health & Drug Information**:
-  - Trusted patient education health topics and drug monographs.
+- [x] **Milestone M4D — Live MedlinePlus Patient Education Integration** *(Current)*:
+  - Official U.S. National Library of Medicine (NLM) MedlinePlus Web Service client (`src/healthcare_agents/retrieval/medlineplus_client.py`).
+  - Authoritative English (`healthTopics`) and Spanish (`healthTopicsSpanish`) consumer health topics, official URLs, and plain-language summaries.
+  - Client-side throttling enforcing strict acceptable use threshold (<85 req/min) and thread-safe in-memory 12h TTL caching.
+  - Optional MedlinePlus Connect adapter for standardized ICD-10-CM / RxCUI / SNOMED CT code-based education.
+  - Comprehensive deterministic validation: official MedlinePlus domain verification, consumer education guardrails, and 4-way data source separation.
 - [ ] **Milestone M4E — Model Context Protocol (MCP) Server Unification**:
   - Unified MCP healthcare tool server interface across all four data sources.
 - [ ] **Milestone M5 — Streamlit UI & FastAPI Gateway**:
@@ -87,13 +91,17 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ## 5. Workflow Architecture
 
-### Milestone M4C — Live NPPES, PubMed & CMS Quality Workflow (Current)
+### Milestone M4D — 4-Source Live Healthcare Discovery Workflow (Current)
 
-The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider discovery, live NCBI PubMed research literature retrieval, and live CMS Provider Data Catalog metrics:
+The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents coordinating all four authoritative public healthcare data sources:
+
+![M4D LangGraph 4-Source Healthcare Discovery Workflow](docs/images/m4d_workflow.png)
+
+> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Biomedical research citations retrieved from NCBI PubMed establish that a publication exists in the scientific literature, not that its conclusions are universally valid or applicable to an individual patient. CMS Provider Data quality metrics (MIPS scores and hospital star ratings) reflect public program participation; the absence of CMS measures for a provider (common in non-Medicare specialties like pediatric dentistry) denotes dataset reporting scope, not poor clinical quality. MedlinePlus patient education content provides general consumer health literacy and does not constitute personalized clinical advice, diagnosis, or treatment. Always consult a licensed clinician.
+
+### Milestone M4C — Live NPPES, PubMed & CMS Quality Workflow
 
 ![M4C LangGraph Healthcare Workflow](docs/images/m4c_workflow.png)
-
-> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Biomedical research citations retrieved from NCBI PubMed establish that a publication exists in the scientific literature, not that its conclusions are universally valid or applicable to an individual patient. CMS Provider Data quality metrics (MIPS scores and hospital star ratings) reflect public program participation; the absence of CMS measures for a provider (common in non-Medicare specialties like pediatric dentistry) denotes dataset reporting scope, not poor clinical quality. Patient education evidence (MedlinePlus) remains simulated fixtures for M4C and will transition to live APIs in M4D.
 
 ### Milestone M3 — Multi-Agent LangGraph Core Architecture (Synthetic Fixtures)
 

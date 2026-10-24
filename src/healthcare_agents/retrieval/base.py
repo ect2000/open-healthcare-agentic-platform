@@ -36,7 +36,7 @@ class ClinicalEvidenceRecord:
 
     record_id: str
     title: str
-    source: str  # e.g. "PubMed-Live", "PubMed-Demo-Fixture", "MedlinePlus-Demo-Fixture"
+    source: str  # e.g. "PubMed-Live", "MedlinePlus-Live", "MedlinePlus-Demo-Fixture"
     summary: str
     evidence_type: str  # "research_study", "clinical_guideline", "patient_education"
     year: int
@@ -48,8 +48,11 @@ class ClinicalEvidenceRecord:
     doi: str = ""
     pubmed_url: str = ""
     retrieval_timestamp: str = ""
-    source_type: str = "PubMed"
+    source_type: str = "PubMed"  # "PubMed", "MedlinePlus", "MedlinePlus-Connect"
     evidence_status: str = "available"  # "available", "no_abstract", "empty_results", "error"
+    official_url: str = ""
+    topic_id: str = ""
+    language: str = "en"
 
 
 @dataclass(frozen=True)
@@ -126,3 +129,16 @@ class BaseQualityRetriever(ABC):
         limit: int = 5,
     ) -> Sequence[CMSQualityRecord]:
         """Retrieve quality ratings for healthcare facilities."""
+
+
+class BasePatientEducationRetriever(ABC):
+    """Abstract interface for MedlinePlus consumer health topic discovery."""
+
+    @abstractmethod
+    def search_topics(
+        self,
+        keyword: str,
+        language: str = "en",
+        limit: int = 5,
+    ) -> Sequence[ClinicalEvidenceRecord]:
+        """Retrieve authoritative patient education topics matching keyword."""

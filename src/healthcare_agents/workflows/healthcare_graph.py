@@ -12,15 +12,18 @@ from healthcare_agents.config import get_settings
 from healthcare_agents.models.base import BaseModelAdapter
 from healthcare_agents.retrieval.base import (
     BaseEvidenceRetriever,
+    BasePatientEducationRetriever,
     BaseProviderRetriever,
     BaseQualityRetriever,
 )
 from healthcare_agents.retrieval.cms_client import CMSProviderDataRetriever
 from healthcare_agents.retrieval.fixtures import (
     FixtureEvidenceRetriever,
+    FixturePatientEducationRetriever,
     FixtureProviderRetriever,
     FixtureQualityRetriever,
 )
+from healthcare_agents.retrieval.medlineplus_client import MedlinePlusPatientEducationRetriever
 from healthcare_agents.retrieval.nppes_client import NPPESProviderRetriever
 from healthcare_agents.retrieval.pubmed_client import PubMedEvidenceRetriever
 from healthcare_agents.workflows.state import HealthcareWorkflowState
@@ -74,11 +77,29 @@ def get_default_quality_retriever() -> BaseQualityRetriever:
     return FixtureQualityRetriever()
 
 
+def get_default_patient_education_retriever() -> BasePatientEducationRetriever:
+    """Resolve MedlinePlus patient education retriever based on application settings."""
+    try:
+        settings = get_settings()
+        if settings.retrieval_mode == "live":
+            return MedlinePlusPatientEducationRetriever(
+                base_url=settings.medlineplus_api_url,
+                connect_url=settings.medlineplus_connect_url,
+                timeout_seconds=settings.medlineplus_timeout_seconds,
+                cache_ttl_seconds=settings.medlineplus_cache_ttl_seconds,
+                max_retries=settings.medlineplus_max_retries,
+            )
+    except Exception:
+        pass
+    return FixturePatientEducationRetriever()
+
+
 def create_healthcare_graph(
     model_adapter: BaseModelAdapter | None = None,
     provider_retriever: BaseProviderRetriever | None = None,
     evidence_retriever: BaseEvidenceRetriever | None = None,
     quality_retriever: BaseQualityRetriever | None = None,
+    patient_education_retriever: BasePatientEducationRetriever | None = None,
 ) -> StateGraph[HealthcareWorkflowState]:
     """Build and return an uncompiled StateGraph for healthcare multi-agent discovery."""
     from healthcare_agents.agents.answer import synthesize_answer
@@ -97,6 +118,11 @@ def create_healthcare_graph(
     resolved_quality_retriever = (
         quality_retriever if quality_retriever is not None else get_default_quality_retriever()
     )
+    resolved_education_retriever = (
+        patient_education_retriever
+        if patient_education_retriever is not None
+        else get_default_patient_education_retriever()
+    )
 
     # Node wrappers injecting dependencies
     def planner_node(state: HealthcareWorkflowState) -> dict[str, Any]:
@@ -110,7 +136,11 @@ def create_healthcare_graph(
         )
 
     def evidence_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return retrieve_evidence(state=state, evidence_retriever=resolved_evidence_retriever)
+        return retrieve_evidence(
+            state=state,
+            evidence_retriever=resolved_evidence_retriever,
+            patient_education_retriever=resolved_education_retriever,
+        )
 
     def validation_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         return validate_records(state=state)
@@ -142,6 +172,7 @@ def run_healthcare_workflow(
     provider_retriever: BaseProviderRetriever | None = None,
     evidence_retriever: BaseEvidenceRetriever | None = None,
     quality_retriever: BaseQualityRetriever | None = None,
+    patient_education_retriever: BasePatientEducationRetriever | None = None,
 ) -> HealthcareWorkflowState:
     """Helper executing compiled workflow with initial state."""
     graph_builder = create_healthcare_graph(
@@ -149,6 +180,7 @@ def run_healthcare_workflow(
         provider_retriever=provider_retriever,
         evidence_retriever=evidence_retriever,
         quality_retriever=quality_retriever,
+        patient_education_retriever=patient_education_retriever,
     )
     app: CompiledStateGraph[HealthcareWorkflowState] = graph_builder.compile()
 
