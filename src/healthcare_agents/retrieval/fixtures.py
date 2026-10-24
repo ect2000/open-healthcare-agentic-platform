@@ -11,7 +11,9 @@ from collections.abc import Sequence
 from healthcare_agents.retrieval.base import (
     BaseEvidenceRetriever,
     BaseProviderRetriever,
+    BaseQualityRetriever,
     ClinicalEvidenceRecord,
+    CMSQualityRecord,
     ProviderRecord,
 )
 
@@ -167,4 +169,78 @@ class FixtureEvidenceRetriever(BaseEvidenceRetriever):
         # Fallback to returning general evidence if no keyword match
         if not matches:
             matches = self._records[:limit]
+        return matches
+
+
+SYNTHETIC_QUALITY: list[CMSQualityRecord] = [
+    CMSQualityRecord(
+        record_id="DEMO-CMS-QUAL-001",
+        npi="9990001111",
+        entity_name="Dr. Jane Smith, DDS",
+        dataset_id="a174-a962",
+        dataset_name="PY 2024 Clinician Public Reporting: Overall MIPS Performance",
+        source="CMS-Provider-Data-Fixture",
+        is_synthetic=True,
+        entity_type="Individual",
+        facility_id="",
+        facility_name="",
+        measure_id="FINAL_MIPS_SCORE",
+        measure_name="MIPS Final Score",
+        score="88.5",
+        retrieval_timestamp="2026-10-24T00:00:00+00:00",
+        source_url="https://data.cms.gov/provider-data/dataset/a174-a962",
+        metadata={"quality_category_score": "86.0", "cost_category_score": "82.5"},
+    ),
+    CMSQualityRecord(
+        record_id="DEMO-CMS-FAC-001",
+        npi="",
+        entity_name="Texas Children's Hospital",
+        dataset_id="xubh-q36u",
+        dataset_name="Hospital General Information",
+        source="CMS-Provider-Data-Fixture",
+        is_synthetic=True,
+        entity_type="Facility",
+        facility_id="450001",
+        facility_name="Texas Children's Hospital",
+        facility_type="Childrens",
+        star_rating="5",
+        city="Houston",
+        state="TX",
+        retrieval_timestamp="2026-10-24T00:00:00+00:00",
+        source_url="https://data.cms.gov/provider-data/dataset/xubh-q36u",
+        metadata={"emergency_services": "Yes"},
+    ),
+]
+
+
+class FixtureQualityRetriever(BaseQualityRetriever):
+    """Deterministic CMS quality retriever querying synthetic quality fixtures."""
+
+    def __init__(self, records: Sequence[CMSQualityRecord] | None = None) -> None:
+        self._records = list(records if records is not None else SYNTHETIC_QUALITY)
+
+    def get_provider_quality(self, npi: str) -> Sequence[CMSQualityRecord]:
+        clean_npi = npi.strip()
+        return [r for r in self._records if r.npi and r.npi == clean_npi]
+
+    def search_facility_quality(
+        self,
+        facility_name: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        limit: int = 5,
+    ) -> Sequence[CMSQualityRecord]:
+        matches: list[CMSQualityRecord] = []
+        for r in self._records:
+            if r.entity_type != "Facility":
+                continue
+            if facility_name and facility_name.lower() not in r.facility_name.lower():
+                continue
+            if city and city.lower() not in r.city.lower():
+                continue
+            if state and state.upper() != r.state.upper():
+                continue
+            matches.append(r)
+            if len(matches) >= limit:
+                break
         return matches

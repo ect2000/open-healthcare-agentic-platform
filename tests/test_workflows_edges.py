@@ -192,3 +192,65 @@ def test_validator_pmid_format_url_and_duplicate_evidence() -> None:
     assert any("invalid PubMed URL" in claim for claim in val["unsupported_claims"])
     assert any("Duplicate PubMed article detected" in note for note in val["notes"])
     assert any("do not attest to specific individual provider" in note for note in val["notes"])
+
+
+def test_validator_cms_quality_and_npi_matching() -> None:
+    """Verify CMS quality validation, exact NPI checking, and clinical independence guardrails."""
+    from healthcare_agents.retrieval.base import CMSQualityRecord
+
+    prov = ProviderRecord(
+        provider_id="P1",
+        npi="1003809641",
+        name="Dr. Robert Davidson",
+        specialty="Internal Medicine",
+        facility_name="Hospital",
+        city="Houston",
+        state="TX",
+        source="CMS-NPPES-Live",
+        is_synthetic=False,
+    )
+    # Valid CMS quality record matching NPI
+    valid_cms = CMSQualityRecord(
+        record_id="CMS-MIPS-1",
+        npi="1003809641",
+        entity_name="Dr. Robert Davidson",
+        dataset_id="a174-a962",
+        dataset_name="PY 2024 Clinician MIPS",
+        source="CMS-Provider-Data",
+        measure_id="FINAL_MIPS_SCORE",
+        score="87.27",
+        is_synthetic=False,
+    )
+    # Unmatched CMS record with different NPI
+    unmatched_cms = CMSQualityRecord(
+        record_id="CMS-MIPS-OTHER",
+        npi="9999999999",
+        entity_name="Dr. Other Clinician",
+        dataset_id="a174-a962",
+        dataset_name="PY 2024 Clinician MIPS",
+        source="CMS-Provider-Data",
+        measure_id="FINAL_MIPS_SCORE",
+        score="95.0",
+        is_synthetic=False,
+    )
+
+    state: HealthcareWorkflowState = {
+        "provider_candidates": [prov],
+        "clinical_evidence": [],
+        "patient_education_evidence": [],
+        "cms_quality": [valid_cms, unmatched_cms],
+        "unmatched_cms_records": [unmatched_cms],
+    }
+
+    res = validate_records(state)
+    val = res["validation_results"]
+
+    # Verify warning on unmatched NPI in cms_quality
+    assert any(
+        "refers to NPI 9999999999 not among candidate providers" in c
+        for c in val["unsupported_claims"]
+    )
+    # Verify guardrail note on absence of CMS quality not equating to low quality
+    assert any("Absence of CMS quality measures" in note for note in val["notes"])
+    # Verify note on preserving unmatched CMS records
+    assert any("Preserved 1 unmatched CMS record" in note for note in val["notes"])

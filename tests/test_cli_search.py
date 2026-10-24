@@ -34,8 +34,9 @@ def test_cli_search_verbose_mode(
     assert "Stage 1: Planner Agent" in captured.out
     assert "Stage 2: Provider Retrieval" in captured.out
     assert "Stage 3: Evidence Retrieval" in captured.out
-    assert "Stage 4: Deterministic Validation" in captured.out
-    assert "Stage 5: Synthesized Discovery Result" in captured.out
+    assert "Stage 4: CMS Provider Data & Quality Reporting" in captured.out
+    assert "Stage 5: Deterministic Validation" in captured.out
+    assert "Stage 6: Synthesized Discovery Result" in captured.out
     assert "Citations & Source Provenance" in captured.out
 
 

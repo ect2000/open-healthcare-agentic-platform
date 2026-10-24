@@ -2,5 +2,5 @@
 
 from healthcare_agents.config import Settings, get_settings
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 __all__ = ["Settings", "__version__", "get_settings"]

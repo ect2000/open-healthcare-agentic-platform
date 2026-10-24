@@ -51,6 +51,20 @@ def format_context(state: HealthcareWorkflowState) -> str:
     else:
         lines.append("(No clinical studies retrieved)")
 
+    cms_quality = state.get("cms_quality", [])
+    lines.append("\n--- CMS QUALITY & PERFORMANCE MEASURES ---")
+    if cms_quality:
+        for q in cms_quality:
+            lines.append(
+                f"- [{q.source}: {q.dataset_id}] {q.entity_name} (NPI: {q.npi}): "
+                f"{q.measure_name} = {q.score}"
+            )
+    else:
+        lines.append(
+            "(No CMS quality measures found for candidate providers. Note: absence of CMS "
+            "quality data reflects public reporting scope, e.g. dentistry, not low quality.)"
+        )
+
     lines.append("\n--- PATIENT EDUCATION EVIDENCE ---")
     if patient_education:
         for e in patient_education:
@@ -138,6 +152,26 @@ def synthesize_answer(
         else:
             summary_parts.append("- No relevant clinical research articles retrieved.")
 
+        summary_parts.append("\n### CMS Provider Quality & Performance (Public Reporting)")
+        cms_quality = state.get("cms_quality", [])
+        if cms_quality:
+            for q in cms_quality:
+                score_str = f"Score: {q.score}" if q.score else "Measure Reported"
+                summary_parts.append(
+                    f"- **{q.entity_name}** (NPI: `{q.npi}`)\n"
+                    f"  - Dataset: {q.dataset_name} (`{q.dataset_id}`)\n"
+                    f"  - Measure: {q.measure_name} | {score_str}\n"
+                    f"  - Source: {q.source} <{q.source_url}>"
+                )
+        else:
+            summary_parts.append(
+                "- No CMS quality ratings or MIPS performance records available "
+                "for candidate providers.\n"
+                "  *(Note: Absence of CMS quality data indicates that these clinicians or "
+                "specialties, such as pediatric dentistry, are outside current CMS "
+                "public reporting programs, not low clinical quality.)*"
+            )
+
         summary_parts.append("\n### Patient Education Evidence (Simulated Fixtures)")
         if patient_education:
             for e in patient_education:
@@ -148,6 +182,7 @@ def synthesize_answer(
             summary_parts.append("- No patient education topics retrieved.")
 
         has_live_prov = any(not p.is_synthetic for p in providers)
+        has_live_cms = any(not q.is_synthetic for q in cms_quality)
         prov_notice = (
             "Provider records retrieved live from the public CMS NPPES registry."
             if has_live_prov
@@ -158,12 +193,18 @@ def synthesize_answer(
             if has_live_pubmed
             else "Research evidence retrieved from demonstration test fixtures."
         )
+        cms_notice = (
+            "Quality and performance data retrieved from CMS Provider Data Catalog."
+            if has_live_cms
+            else "Quality measures evaluated against CMS Provider Data Catalog."
+        )
         summary_parts.append(
-            f"\n*Notice: {prov_notice} {pub_notice} Patient education evidence (MedlinePlus) "
-            "remains simulated fixtures for M4B. An NPI is an administrative identifier and not "
-            "proof of licensure or competence; a PubMed citation establishes literature "
-            "publication and does not substitute for individualized medical advice. "
-            "Always consult a licensed clinician.*"
+            f"\n*Notice: {prov_notice} {pub_notice} {cms_notice} "
+            "Patient education evidence (MedlinePlus) remains simulated fixtures for M4C. "
+            "An NPI is an administrative identifier and not proof of licensure or competence; "
+            "a PubMed citation establishes literature publication and does not substitute for "
+            "individualized medical advice; absence of CMS quality scores does not denote low "
+            "quality. Always consult a licensed clinician.*"
         )
         final_answer = "\n".join(summary_parts)
 

@@ -101,6 +101,29 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
             provenance_verified = False
             unsupported_claims.append(f"Evidence {e.title} has no verifiable source provenance.")
 
+    # 4. CMS Quality Records validation and NPI match verification
+    cms_quality = state.get("cms_quality", [])
+    unmatched_cms = state.get("unmatched_cms_records", [])
+
+    provider_npis = {p.npi for p in providers if p.npi}
+    for q in cms_quality:
+        if not q.source:
+            provenance_verified = False
+            unsupported_claims.append(
+                f"CMS quality record {q.record_id} has no verifiable source provenance."
+            )
+        if q.npi and q.npi not in provider_npis:
+            unsupported_claims.append(
+                f"CMS quality record {q.record_id} refers to NPI {q.npi} "
+                "not among candidate providers."
+            )
+
+    if unmatched_cms:
+        notes.append(
+            f"Preserved {len(unmatched_cms)} unmatched CMS record(s) "
+            "separately without linking to providers."
+        )
+
     # Guardrail: Clinical research articles establish general biomedical literature existence,
     # and must never be asserted as direct evidence of an individual clinician's qualifications,
     # experience, or clinical outcomes.
@@ -110,7 +133,16 @@ def validate_records(state: HealthcareWorkflowState) -> dict[str, Any]:
             "to specific individual provider clinical competence, board certification, or outcomes."
         )
 
-    # 4. Check for missing evidence
+    # Guardrail: CMS Provider Data quality scores (e.g. MIPS or Hospital star ratings) apply only
+    # to participating clinicians/facilities and must never be extrapolated to other providers.
+    # Missing CMS quality data indicates absence of public program reporting, NOT low quality.
+    notes.append(
+        "Absence of CMS quality measures for a provider indicates lack of public program "
+        "participation or dataset coverage (common in dentistry and non-Medicare specialties), "
+        "not poor clinical quality."
+    )
+
+    # 5. Check for missing evidence
     if not providers and not all_evidence:
         notes.append("No provider or clinical evidence records retrieved.")
 

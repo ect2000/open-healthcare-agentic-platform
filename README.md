@@ -62,14 +62,18 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Real public CMS NPPES NPI Registry API version 2.1 client (`src/healthcare_agents/retrieval/nppes_client.py`).
   - Real provider search by specialty, taxonomy description, city, state, and direct 10-digit NPI lookup.
   - Practice location validation against LOCATION addresses and relevant provider taxonomy filtering.
-- [x] **Milestone M4B — Live PubMed Biomedical Research Literature Discovery** *(Current)*:
+- [x] **Milestone M4B — Live PubMed Biomedical Research Literature Discovery**:
   - Official NCBI Entrez E-utilities client (`src/healthcare_agents/retrieval/pubmed_client.py`) implementing ESearch and EFetch.
   - Live biomedical literature retrieval by query topic, full abstracts, authors, journals, DOIs, and PubMed URLs.
   - Rate-limiting (3 req/s without key, 10 req/s with key) and exponential backoff retry.
   - Deterministic validation of PMID format, PubMed URLs, duplicate detection, and research independence guardrails.
   - Grounded Gemma 4 synthesis citing real NPPES providers and real PubMed literature.
-- [ ] **Milestone M4C — CMS Provider Data Quality Metrics**:
-  - CMS clinician ratings, hospital performance, and facility metrics.
+- [x] **Milestone M4C — CMS Provider Data Quality Metrics & Affiliations** *(Current)*:
+  - Official CMS Provider Data Catalog client (`src/healthcare_agents/retrieval/cms_client.py`).
+  - Clinician MIPS quality measures (`a174-a962`), hospital general information and star ratings (`xubh-q36u`), and facility affiliations (`27ea-46a8`).
+  - Safe, exact NPI-based joins against candidate providers; unmatched CMS records kept strictly unjoined.
+  - PubMed query refinement (`[Title/Abstract]` and `[MeSH Terms]`) and deterministic title/abstract relevance safeguards preventing unrelated study retrieval.
+  - Quality guardrails: missing CMS quality data explicitly documented as lack of public program scope (e.g. dentistry), never low quality.
 - [ ] **Milestone M4D — MedlinePlus Consumer Health & Drug Information**:
   - Trusted patient education health topics and drug monographs.
 - [ ] **Milestone M4E — Model Context Protocol (MCP) Server Unification**:
@@ -83,13 +87,13 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ## 5. Workflow Architecture
 
-### Milestone M4B — Live NPPES Provider & PubMed Research Workflow (Current)
+### Milestone M4C — Live NPPES, PubMed & CMS Quality Workflow (Current)
 
-The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider discovery and live NCBI PubMed research literature retrieval:
+The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents with live CMS NPPES provider discovery, live NCBI PubMed research literature retrieval, and live CMS Provider Data Catalog metrics:
 
-![M4B LangGraph Healthcare Workflow](docs/images/m4b_workflow.png)
+![M4C LangGraph Healthcare Workflow](docs/images/m4c_workflow.png)
 
-> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Biomedical research citations retrieved from NCBI PubMed establish that a publication exists in the scientific literature, not that its conclusions are universally valid or applicable to an individual patient. Patient education evidence (MedlinePlus) remains simulated fixtures for M4B and will transition to live APIs in M4D.
+> **Administrative & Clinical Disclaimer**: Provider records are retrieved live from the public CMS National Plan and Provider Enumeration System (NPPES) Registry API version 2.1. An NPI is an administrative standard identifier under HIPAA and is **NOT** proof of professional medical licensure, clinical competence, board certification, or service quality. Biomedical research citations retrieved from NCBI PubMed establish that a publication exists in the scientific literature, not that its conclusions are universally valid or applicable to an individual patient. CMS Provider Data quality metrics (MIPS scores and hospital star ratings) reflect public program participation; the absence of CMS measures for a provider (common in non-Medicare specialties like pediatric dentistry) denotes dataset reporting scope, not poor clinical quality. Patient education evidence (MedlinePlus) remains simulated fixtures for M4C and will transition to live APIs in M4D.
 
 ### Milestone M3 — Multi-Agent LangGraph Core Architecture (Synthetic Fixtures)
 

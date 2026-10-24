@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
-from healthcare_agents.retrieval.base import ClinicalEvidenceRecord, ProviderRecord
+from healthcare_agents.retrieval.base import (
+    ClinicalEvidenceRecord,
+    CMSQualityRecord,
+    ProviderRecord,
+)
 
 
 class SearchPlan(TypedDict, total=False):
@@ -37,6 +41,8 @@ class HealthcareWorkflowState(TypedDict, total=False):
     provider_candidates: list[ProviderRecord]
     clinical_evidence: list[ClinicalEvidenceRecord]
     patient_education_evidence: list[ClinicalEvidenceRecord]
+    cms_quality: list[CMSQualityRecord]
+    unmatched_cms_records: list[CMSQualityRecord]
     citations: list[str]
     validation_results: ValidationResults
     unsupported_claims: list[str]

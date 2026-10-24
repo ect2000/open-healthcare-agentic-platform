@@ -41,6 +41,9 @@ class Settings:
     ncbi_api_key: str | None
     ncbi_email: str | None
     ncbi_tool: str
+    cms_api_url: str
+    cms_timeout_seconds: float
+    cms_max_retries: int
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -169,6 +172,32 @@ class Settings:
         if not ncbi_tool:
             ncbi_tool = "open-healthcare-agentic-platform"
 
+        cms_api_url = source.get("CMS_API_URL", "https://data.cms.gov/provider-data/api/1/").strip()
+        if not cms_api_url.startswith(("http://", "https://")):
+            raise ConfigurationError(
+                f"Invalid CMS_API_URL '{cms_api_url}'. Must start with http:// or https://."
+            )
+
+        raw_cms_timeout = source.get("CMS_TIMEOUT_SECONDS", "15.0")
+        try:
+            cms_timeout_seconds = float(raw_cms_timeout)
+            if cms_timeout_seconds <= 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid CMS_TIMEOUT_SECONDS '{raw_cms_timeout}'. Must be a positive number."
+            ) from None
+
+        raw_cms_retries = source.get("CMS_MAX_RETRIES", "3")
+        try:
+            cms_max_retries = int(raw_cms_retries)
+            if cms_max_retries < 0:
+                raise ValueError
+        except ValueError:
+            raise ConfigurationError(
+                f"Invalid CMS_MAX_RETRIES '{raw_cms_retries}'. Must be a non-negative integer."
+            ) from None
+
         return cls(
             app_name=app_name,
             environment=environment,
@@ -187,6 +216,9 @@ class Settings:
             ncbi_api_key=ncbi_api_key,
             ncbi_email=ncbi_email,
             ncbi_tool=ncbi_tool,
+            cms_api_url=cms_api_url,
+            cms_timeout_seconds=cms_timeout_seconds,
+            cms_max_retries=cms_max_retries,
         )
 
 

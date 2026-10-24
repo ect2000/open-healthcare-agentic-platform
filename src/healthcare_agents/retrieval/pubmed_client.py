@@ -71,6 +71,50 @@ class PubMedEvidenceRetriever(BaseEvidenceRetriever):
         self._min_interval = 0.11 if self.api_key else 0.35  # Respect 10 req/s or 3 req/s
         self._last_request_time = 0.0
 
+    @staticmethod
+    def _build_search_query(topic: str) -> str:
+        """Construct a refined PubMed search query targeting Title/Abstract and MeSH.
+
+        Prevents author affiliation contamination (e.g., retrieving dementia studies
+        with dental department affiliations for dental queries).
+        """
+        raw_parts = [p.strip() for p in topic.replace(";", ",").split(",") if p.strip()]
+        if not raw_parts:
+            return topic
+
+        clauses: list[str] = []
+        for part in raw_parts:
+            # Check if part already has field tags like [Title/Abstract] or quotes
+            if "[" in part and "]" in part:
+                clauses.append(part)
+            else:
+                # Wrap in Title/Abstract or MeSH clause
+                clean_term = part.replace('"', "")
+                clauses.append(f'("{clean_term}"[Title/Abstract] OR "{clean_term}"[MeSH Terms])')
+
+        if len(clauses) == 1:
+            return clauses[0]
+        return " AND ".join(clauses)
+
+    @staticmethod
+    def _is_topically_relevant(record: ClinicalEvidenceRecord, query_topic: str) -> bool:
+        """Perform deterministic relevance check on title and abstract text.
+
+        Ensures that at least one primary topic keyword appears in the title or abstract,
+        rejecting studies where the term only matched author affiliations.
+        """
+        topic_terms = [
+            t.strip().lower()
+            for t in query_topic.replace(",", " ").replace(";", " ").split()
+            if len(t.strip()) > 3
+        ]
+        if not topic_terms:
+            return True
+
+        content = f"{record.title} {record.summary}".lower()
+        # Ensure at least one significant query term is present in title or abstract
+        return any(term in content for term in topic_terms)
+
     def search_evidence(
         self,
         topic: str,
@@ -78,6 +122,9 @@ class PubMedEvidenceRetriever(BaseEvidenceRetriever):
         limit: int = 5,
     ) -> Sequence[ClinicalEvidenceRecord]:
         """Search PubMed via ESearch and fetch article metadata via EFetch.
+
+        Applies deterministic query refinement and title/abstract relevance validation
+        to prevent unrelated publications (such as affiliation-only matches) from polluting results.
 
         Args:
             topic: Biomedical query or search string.
@@ -89,11 +136,36 @@ class PubMedEvidenceRetriever(BaseEvidenceRetriever):
             return []
 
         clamped_limit = max(1, min(limit, 50))
-        pmids = self._esearch(term=cleaned_topic, retmax=clamped_limit)
+        refined_query = self._build_search_query(cleaned_topic)
+
+        # Retrieve a slight buffer to allow deterministic relevance filtering
+        buffer_limit = min(clamped_limit * 3, 50)
+        pmids = self._esearch(term=refined_query, retmax=buffer_limit)
+
+        # Fallback to literal search if refined syntax returns nothing
+        if not pmids and refined_query != cleaned_topic:
+            pmids = self._esearch(term=cleaned_topic, retmax=buffer_limit)
+
         if not pmids:
             return []
 
-        return self._efetch(pmids=pmids)
+        fetched = self._efetch(pmids=pmids)
+        # Apply deterministic relevance safeguard against title and abstract
+        relevant_records: list[ClinicalEvidenceRecord] = []
+        for rec in fetched:
+            if self._is_topically_relevant(rec, cleaned_topic):
+                relevant_records.append(rec)
+            else:
+                logger.info(
+                    "Excluding irrelevant PubMed article PMID %s ('%s'): "
+                    "no topic keyword in title or abstract.",
+                    rec.pmid,
+                    rec.title,
+                )
+            if len(relevant_records) >= clamped_limit:
+                break
+
+        return relevant_records
 
     def _apply_rate_limit(self) -> None:
         """Enforce rate limits between consecutive NCBI requests."""

@@ -13,10 +13,13 @@ from healthcare_agents.models.base import BaseModelAdapter
 from healthcare_agents.retrieval.base import (
     BaseEvidenceRetriever,
     BaseProviderRetriever,
+    BaseQualityRetriever,
 )
+from healthcare_agents.retrieval.cms_client import CMSProviderDataRetriever
 from healthcare_agents.retrieval.fixtures import (
     FixtureEvidenceRetriever,
     FixtureProviderRetriever,
+    FixtureQualityRetriever,
 )
 from healthcare_agents.retrieval.nppes_client import NPPESProviderRetriever
 from healthcare_agents.retrieval.pubmed_client import PubMedEvidenceRetriever
@@ -56,10 +59,26 @@ def get_default_evidence_retriever() -> BaseEvidenceRetriever:
     return FixtureEvidenceRetriever()
 
 
+def get_default_quality_retriever() -> BaseQualityRetriever:
+    """Resolve CMS quality retriever based on application settings."""
+    try:
+        settings = get_settings()
+        if settings.retrieval_mode == "live":
+            return CMSProviderDataRetriever(
+                base_url=settings.cms_api_url,
+                timeout_seconds=settings.cms_timeout_seconds,
+                max_retries=settings.cms_max_retries,
+            )
+    except Exception:
+        pass
+    return FixtureQualityRetriever()
+
+
 def create_healthcare_graph(
     model_adapter: BaseModelAdapter | None = None,
     provider_retriever: BaseProviderRetriever | None = None,
     evidence_retriever: BaseEvidenceRetriever | None = None,
+    quality_retriever: BaseQualityRetriever | None = None,
 ) -> StateGraph[HealthcareWorkflowState]:
     """Build and return an uncompiled StateGraph for healthcare multi-agent discovery."""
     from healthcare_agents.agents.answer import synthesize_answer
@@ -75,13 +94,20 @@ def create_healthcare_graph(
     resolved_evidence_retriever = (
         evidence_retriever if evidence_retriever is not None else get_default_evidence_retriever()
     )
+    resolved_quality_retriever = (
+        quality_retriever if quality_retriever is not None else get_default_quality_retriever()
+    )
 
     # Node wrappers injecting dependencies
     def planner_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         return plan_query(state=state, model_adapter=model_adapter)
 
     def provider_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return retrieve_providers(state=state, provider_retriever=resolved_provider_retriever)
+        return retrieve_providers(
+            state=state,
+            provider_retriever=resolved_provider_retriever,
+            quality_retriever=resolved_quality_retriever,
+        )
 
     def evidence_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         return retrieve_evidence(state=state, evidence_retriever=resolved_evidence_retriever)
@@ -115,12 +141,14 @@ def run_healthcare_workflow(
     model_adapter: BaseModelAdapter | None = None,
     provider_retriever: BaseProviderRetriever | None = None,
     evidence_retriever: BaseEvidenceRetriever | None = None,
+    quality_retriever: BaseQualityRetriever | None = None,
 ) -> HealthcareWorkflowState:
     """Helper executing compiled workflow with initial state."""
     graph_builder = create_healthcare_graph(
         model_adapter=model_adapter,
         provider_retriever=provider_retriever,
         evidence_retriever=evidence_retriever,
+        quality_retriever=quality_retriever,
     )
     app: CompiledStateGraph[HealthcareWorkflowState] = graph_builder.compile()
 
@@ -131,6 +159,8 @@ def run_healthcare_workflow(
         "provider_candidates": [],
         "clinical_evidence": [],
         "patient_education_evidence": [],
+        "cms_quality": [],
+        "unmatched_cms_records": [],
         "citations": [],
         "validation_results": {},
         "unsupported_claims": [],

@@ -207,3 +207,44 @@ def test_pubmed_malformed_xml_and_json() -> None:
         with pytest.raises(PubMedResponseError) as exc_info2:
             retriever._efetch(["12345"])
         assert "Malformed XML" in str(exc_info2.value)
+
+
+def test_pubmed_query_refinement_and_relevance_exclusion() -> None:
+    """Verify deterministic query refinement and title/abstract relevance safeguards."""
+    retriever = PubMedEvidenceRetriever()
+
+    # 1. Query refinement syntax
+    refined = retriever._build_search_query("dental anxiety, pediatric dentistry")
+    assert '("dental anxiety"[Title/Abstract] OR "dental anxiety"[MeSH Terms])' in refined
+    assert '("pediatric dentistry"[Title/Abstract] OR "pediatric dentistry"[MeSH Terms])' in refined
+    assert " AND " in refined
+
+    # 2. Relevance checking
+    from healthcare_agents.retrieval.base import ClinicalEvidenceRecord
+
+    relevant_record = ClinicalEvidenceRecord(
+        record_id="PUBMED-1",
+        title="Reducing Dental Anxiety in Pediatric Patients",
+        source="PubMed-Live",
+        summary="A study evaluating music interventions for children experiencing dental anxiety.",
+        evidence_type="research_study",
+        year=2024,
+        is_synthetic=False,
+    )
+    assert retriever._is_topically_relevant(relevant_record, "dental anxiety, pediatric dentistry")
+
+    # 3. Irrelevant study with only affiliation mention (e.g., dementia study)
+    irrelevant_record = ClinicalEvidenceRecord(
+        record_id="PUBMED-39046104",
+        title="A genome-wide association meta-analysis of all-cause and vascular dementia",
+        source="PubMed-Live",
+        summary=(
+            "GWAS meta-analysis identifying genetic risk variants for Alzheimer and dementia."
+        ),
+        evidence_type="research_study",
+        year=2024,
+        is_synthetic=False,
+    )
+    assert not retriever._is_topically_relevant(
+        irrelevant_record, "dental anxiety, pediatric dentistry"
+    )

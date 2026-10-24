@@ -52,6 +52,33 @@ class ClinicalEvidenceRecord:
     evidence_status: str = "available"  # "available", "no_abstract", "empty_results", "error"
 
 
+@dataclass(frozen=True)
+class CMSQualityRecord:
+    """CMS Provider Data Catalog quality or facility affiliation record."""
+
+    record_id: str
+    npi: str
+    entity_name: str
+    dataset_id: str
+    dataset_name: str
+    source: str = "CMS-Provider-Data"
+    is_synthetic: bool = True
+    entity_type: str = "Individual"  # "Individual", "Facility", or "Group"
+    facility_id: str = ""
+    facility_name: str = ""
+    facility_type: str = ""
+    measure_id: str = ""
+    measure_name: str = ""
+    score: str = ""  # Numeric or categorical rating as string
+    performance_rate: str = ""
+    star_rating: str = ""
+    city: str = ""
+    state: str = ""
+    retrieval_timestamp: str = ""
+    source_url: str = ""
+    metadata: dict[str, str] = field(default_factory=dict)
+
+
 class BaseProviderRetriever(ABC):
     """Abstract interface for healthcare provider discovery."""
 
@@ -78,3 +105,24 @@ class BaseEvidenceRetriever(ABC):
         limit: int = 5,
     ) -> Sequence[ClinicalEvidenceRecord]:
         """Retrieve relevant scientific or patient education evidence."""
+
+
+class BaseQualityRetriever(ABC):
+    """Abstract interface for CMS clinician and facility quality metric retrieval."""
+
+    @abstractmethod
+    def get_provider_quality(
+        self,
+        npi: str,
+    ) -> Sequence[CMSQualityRecord]:
+        """Retrieve quality or affiliation measures for an individual or group NPI."""
+
+    @abstractmethod
+    def search_facility_quality(
+        self,
+        facility_name: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        limit: int = 5,
+    ) -> Sequence[CMSQualityRecord]:
+        """Retrieve quality ratings for healthcare facilities."""

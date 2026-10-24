@@ -300,7 +300,30 @@ def handle_search(query: str, verbose: bool = False) -> int:
             sys.stdout.write("(No clinical or educational evidence records retrieved)\n")
         sys.stdout.write("\n")
 
-        sys.stdout.write("--- [Stage 4: Deterministic Validation] ---\n")
+        sys.stdout.write("--- [Stage 4: CMS Provider Data & Quality Reporting] ---\n")
+        cms_quality = state.get("cms_quality", [])
+        unmatched_cms = state.get("unmatched_cms_records", [])
+        if cms_quality:
+            for q in cms_quality:
+                q_status = "FIXTURE" if q.is_synthetic else "LIVE CMS"
+                val = f"{q.measure_name}: {q.score}" if q.score else q.measure_name
+                sys.stdout.write(
+                    f"- [{q_status}] {q.entity_name} [NPI: {q.npi}] | Dataset: {q.dataset_id} "
+                    f"({q.dataset_name}) | {val} | URL: {q.source_url}\n"
+                )
+        else:
+            sys.stdout.write(
+                "(No CMS quality records available for candidate providers. Note: Specialties like "
+                "pediatric dentistry are generally not included in MIPS or Hospital datasets; "
+                "this denotes dataset scope, not poor clinical quality.)\n"
+            )
+        if unmatched_cms:
+            sys.stdout.write(
+                f"(Preserved {len(unmatched_cms)} unmatched CMS record(s) safely unjoined.)\n"
+            )
+        sys.stdout.write("\n")
+
+        sys.stdout.write("--- [Stage 5: Deterministic Validation] ---\n")
         valid_str = "VALID" if validation.get("is_valid") else "INVALID"
         sys.stdout.write(f"Status:             {valid_str}\n")
         sys.stdout.write(f"Duplicates Checked: {validation.get('duplicate_providers_found', 0)}\n")
@@ -309,7 +332,7 @@ def handle_search(query: str, verbose: bool = False) -> int:
             sys.stdout.write(f"Warnings:           {', '.join(validation['unsupported_claims'])}\n")
         sys.stdout.write("\n")
 
-    sys.stdout.write("--- [Stage 5: Synthesized Discovery Result] ---\n")
+    sys.stdout.write("--- [Stage 6: Synthesized Discovery Result] ---\n")
     sys.stdout.write(f"{final_answer}\n\n")
 
     citations = state.get("citations", [])
@@ -321,11 +344,16 @@ def handle_search(query: str, verbose: bool = False) -> int:
 
     has_live_prov = any(not p.is_synthetic for p in providers)
     has_live_pubmed = any(not e.is_synthetic for e in evidence if e.source == "PubMed-Live")
+    has_live_cms = any(not q.is_synthetic for q in state.get("cms_quality", []))
     if has_live_prov and has_live_pubmed:
+        cms_desc = (
+            "CMS Provider Data Catalog" if has_live_cms else "CMS Provider Data Catalog evaluated"
+        )
         sys.stdout.write(
-            "[Notice: Provider records retrieved live from CMS NPPES Registry API v2.1. "
-            "Biomedical literature retrieved live from NCBI Entrez PubMed. "
-            "Patient education evidence (MedlinePlus) remains simulated fixtures for M4B.]\n"
+            f"[Notice: Provider records retrieved live from CMS NPPES Registry API v2.1. "
+            f"Biomedical literature retrieved live from NCBI Entrez PubMed. "
+            f"Quality measures retrieved live from {cms_desc}. "
+            f"Patient education evidence (MedlinePlus) remains simulated fixtures for M4C.]\n"
         )
     elif has_live_prov:
         sys.stdout.write(

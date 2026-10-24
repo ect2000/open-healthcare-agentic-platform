@@ -6,8 +6,8 @@ from healthcare_agents import Settings, __version__, get_settings
 
 def test_package_metadata() -> None:
     """Verify package version is defined and non-empty."""
-    assert __version__ == "0.4.1"
-    assert healthcare_agents.__version__ == "0.4.1"
+    assert __version__ == "0.4.2"
+    assert healthcare_agents.__version__ == "0.4.2"
 
 
 def test_package_exports() -> None:
