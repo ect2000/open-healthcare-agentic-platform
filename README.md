@@ -159,6 +159,10 @@ Milestone M8 delivers end-to-end distributed tracing, application metrics, and r
 ![M8 Streamlit Trace](docs/images/m08_streamlit_trace.png)
 *Figure: Streamlit interface presenting verifiable Hex Trace IDs and deep links directly into the Grafana Tempo trace view.*
 
+#### 8. Developer & Observability Hub & Real Service Health Probing
+![M8 Developer & Observability Hub](docs/images/m08_developer_observability_hub.png)
+*Figure: Streamlit sidebar Developer & Observability Hub providing direct links to FastAPI Docs, Grafana, Tempo, and Prometheus alongside live health check status indicators.*
+
 ---
 
 ### Milestone M7 — Intelligent Query Fan-Out & Parallel Workflow

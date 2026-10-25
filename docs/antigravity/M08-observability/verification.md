@@ -64,3 +64,4 @@
 5. **Gemma 4 Inference**: `docs/images/m08_gemma4_inference.png`
 6. **Grafana Tempo Trace**: `docs/images/m08_tempo_trace.png`
 7. **Streamlit Trace Correlation**: `docs/images/m08_streamlit_trace.png`
+8. **Developer & Observability Hub**: `docs/images/m08_developer_observability_hub.png`
