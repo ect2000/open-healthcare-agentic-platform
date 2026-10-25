@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-healthcare-ui
+  namespace: open-healthcare
+  labels:
+    app.kubernetes.io/name: open-healthcare-ui
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: open-healthcare-agentic-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: open-healthcare-ui
+  ports:
+    - name: http
+      port: 8501
+      targetPort: 8501
+      protocol: TCP

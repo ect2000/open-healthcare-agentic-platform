@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: open-healthcare
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - api-deployment.yaml
+  - api-service.yaml
+  - ui-deployment.yaml
+  - ui-service.yaml
+  - observability/otel-collector.yaml
+  - observability/prometheus.yaml
+  - observability/tempo.yaml
+  - observability/grafana.yaml
