@@ -1,0 +1,40 @@
+name: Feature Request
+description: Suggest an idea or enhancement for the platform
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature!
+        Please describe your proposal clearly and ensure it aligns with our vendor-neutral open-source architecture.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem or limitation?
+      placeholder: A clear description of the problem or opportunity.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution or Architecture
+      description: Describe your proposed solution and how it integrates with LangGraph, FastAPI, OpenTelemetry, or public healthcare data.
+      placeholder: Detailed description of the feature and architecture.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Approaches Considered
+      description: Any alternative solutions or features you've considered.
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Estimated Difficulty
+      options:
+        - Beginner
+        - Intermediate
+        - Advanced
+    validations:
+      required: true
