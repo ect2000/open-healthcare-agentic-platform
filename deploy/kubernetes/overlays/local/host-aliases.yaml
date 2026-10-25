@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-healthcare-api
+  namespace: open-healthcare
+spec:
+  template:
+    spec:
+      hostAliases:
+        - ip: "172.18.0.1"
+          hostnames:
+            - "host.docker.internal"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-healthcare-ui
+  namespace: open-healthcare
+spec:
+  template:
+    spec:
+      hostAliases:
+        - ip: "172.18.0.1"
+          hostnames:
+            - "host.docker.internal"

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healthcare-config
+  namespace: open-healthcare
+data:
+  OLLAMA_BASE_URL: "http://host-ollama-bridge:11434"

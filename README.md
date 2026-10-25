@@ -122,6 +122,12 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Pre-built 6-section Grafana monitoring dashboard: **"Open Healthcare Agentic AI — Observability"** (`uid: healthcare-observability`).
   - Interactive Streamlit distributed trace correlation with deep-linking directly into Grafana Tempo trace exploration.
   - One-command demonstration launcher (`python scripts/run_demo.py`) with complete container and host service health verification.
+- [ ] **Milestone M9 — Kubernetes-Native Deployment for Healthcare Agents** *(In Progress — Issue [#4](https://github.com/hastimal.jangid/open-healthcare-agentic-platform/issues/4))*:
+  - Vendor-neutral, declarative Kubernetes deployment structured with **Kustomize** (`deploy/kubernetes/`).
+  - Deployments and services for `open-healthcare-api`, `open-healthcare-ui`, `otel-collector`, `prometheus`, `tempo`, and `grafana`.
+  - Transparent macOS host Ollama networking via in-cluster `host-ollama-bridge` reverse proxy preserving Metal GPU acceleration.
+  - Dedicated lifecycle scripts: `scripts/k8s_deploy.py`, `scripts/k8s_smoke_test.py`, and `scripts/k8s_cleanup.py`.
+  - Comprehensive documentation in [`docs/deployment/kubernetes.md`](docs/deployment/kubernetes.md).
 
 ---
 

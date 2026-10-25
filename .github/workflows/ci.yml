@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "feature/**" ]
+    branches: [ "main", "feature/**", "[0-9]*-**" ]
   pull_request:
     branches: [ "main" ]
 
@@ -47,6 +47,11 @@ jobs:
       - name: Build wheel and source distribution
         run: |
           python -m build
+
+      - name: Validate Kubernetes Manifests
+        run: |
+          kubectl kustomize deploy/kubernetes/base
+          kubectl kustomize deploy/kubernetes/overlays/local
 
       - name: Verify package installation and import
         run: |

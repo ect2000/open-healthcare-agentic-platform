@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healthcare-config
+  namespace: open-healthcare
+  labels:
+    app.kubernetes.io/name: open-healthcare
+    app.kubernetes.io/part-of: open-healthcare-agentic-platform
+data:
+  HEALTHCARE_AGENTS_ENV: "production"
+  HEALTHCARE_AGENTS_LOG_LEVEL: "INFO"
+  MODEL_PROVIDER: "ollama"
+  MODEL_NAME: "gemma4:e2b"
+  OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+  MODEL_TIMEOUT_SECONDS: "180"
+  RETRIEVAL_MODE: "live"
+  NPPES_API_URL: "https://npiregistry.cms.hhs.gov/api/"
+  NPPES_TIMEOUT_SECONDS: "15"
+  PUBMED_API_URL: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+  PUBMED_TIMEOUT_SECONDS: "15"
+  CMS_API_URL: "https://data.cms.gov/provider-data/api/1/"
+  CMS_TIMEOUT_SECONDS: "20"
+  MEDLINEPLUS_API_URL: "https://wsearch.nlm.nih.gov/ws/query"
+  MEDLINEPLUS_CONNECT_URL: "https://connect.medlineplus.gov/service"
+  MEDLINEPLUS_TIMEOUT_SECONDS: "15"
+  API_BASE_URL: "http://open-healthcare-api:8000"
+  HEALTHCARE_AGENTS_API_URL: "http://open-healthcare-api:8000"
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=kubernetes"

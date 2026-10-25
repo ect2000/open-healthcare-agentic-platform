@@ -75,6 +75,8 @@ ignore = []
 "tests/test_ui.py" = ["E501"]
 "scripts/run_demo.py" = ["E501", "RUF001"]
 "scripts/capture_m8_screenshots.py" = ["E501"]
+"scripts/capture_m9_screenshots.py" = ["E501", "W293"]
+"scripts/generate_k8s_architecture_diagram.py" = ["E501", "W293", "RUF001"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["healthcare_agents"]
