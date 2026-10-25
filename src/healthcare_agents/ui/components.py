@@ -356,9 +356,10 @@ def render_agent_workflow_and_fanout(resp: SearchResponse) -> None:
         "Decomposed query fan-out, concurrent execution graph, and stage-by-stage dependency tracking."
     )
 
-    # 1. Mermaid Execution Workflow Graph
+    # 1. Mermaid Execution Workflow Graph with High-Contrast Theming
     st.markdown("#### 🗺️ Executed Workflow Pipeline")
     workflow_mermaid = """
+    %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e3a8a', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#3b82f6', 'lineColor': '#38bdf8', 'secondaryColor': '#0f766e', 'tertiaryColor': '#1e293b'}}}%%
     graph TD
         Q["User Healthcare Inquiry"] --> P["🧠 Planner Agent<br/>(Gemma 4 Intent & Parameter Extraction)"]
         P --> F["🔀 Query Fan-Out Planner<br/>(Decompose into 4 Sources)"]
@@ -376,12 +377,21 @@ def render_agent_workflow_and_fanout(resp: SearchResponse) -> None:
         VAL --> SYN["✍️ Answer Synthesis<br/>(Gemma 4 Grounded Generation)"]
         SYN --> OUT["📋 Grounded Summary & Citations"]
 
-        classDef agent fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
-        classDef tool fill:#f0fdf4,stroke:#22c55e,stroke-width:2px;
-        classDef storage fill:#fef3c7,stroke:#f59e0b,stroke-width:2px;
-        class P,F,SYN agent;
-        class NPPES,PubMed,Medline,CMS tool;
-        class EP,VAL storage;
+        classDef inquiry fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+        classDef planner fill:#1e3a8a,stroke:#60a5fa,stroke-width:2px,color:#ffffff;
+        classDef fanout fill:#581c87,stroke:#c084fc,stroke-width:2px,color:#ffffff;
+        classDef source fill:#065f46,stroke:#34d399,stroke-width:2px,color:#ffffff;
+        classDef dependent fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#ffffff;
+        classDef processing fill:#1e293b,stroke:#94a3b8,stroke-width:2px,color:#ffffff;
+        classDef output fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+
+        class Q inquiry;
+        class P,SYN planner;
+        class F fanout;
+        class NPPES,PubMed,Medline source;
+        class CMS dependent;
+        class EP,VAL processing;
+        class OUT output;
     """
     st.markdown(f"```mermaid\n{workflow_mermaid}\n```")
 

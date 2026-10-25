@@ -40,3 +40,23 @@
 
 ### 6. OpenTelemetry Readiness
 - Extended `ExecutionEvent` schema in `api/schemas.py` with `query_id` and `dependency_ids` alongside existing `trace_id`, `span_id`, and `parent_span_id`.
+
+### 7. UI/UX Polish & Visual Acceptance Enhancements
+- **Compact Sidebar Status Panel**:
+  - Replaced stacked notification banners with a unified, dark-slate (`#1e293b`) status badge container.
+  - Dynamically renders actual runtime statuses (`Live Federal` vs `Fixture`, `Online`, `Available`) with zero hardcoded values.
+- **Removed Excessive Sidebar Spacing**:
+  - Eliminated duplicate `st.markdown("---")` dividers and extra vertical container margins.
+  - Placed "Quick Demonstrations" directly below the status panel with clean, subtle border divider (`#334155`).
+- **Synchronized Search Input**:
+  - Bound preset selection to both `session_state["query_input_text"]` and `session_state["search_query_field"]`.
+  - Clicking any of the 6 presets immediately displays the editable query in the primary search field without auto-executing search.
+- **High-Contrast Mermaid Workflow Diagram**:
+  - Injected explicit CSS classes with dark fills and `#ffffff` font styling across all pipeline stages:
+    - User Inquiry: `#0f172a` (stroke: `#38bdf8`)
+    - Planner & Synthesis: `#1e3a8a` (stroke: `#60a5fa`)
+    - Query Fan-Out: `#581c87` (stroke: `#c084fc`)
+    - Retrieval Sources: `#065f46` (stroke: `#34d399`)
+    - Dependent CMS: `#78350f` (stroke: `#fbbf24`)
+    - Evidence Processing & Validator: `#1e293b` (stroke: `#94a3b8`)
+  - Guaranteed high contrast and readability across dark and light themes and varying viewports (1440px, 1280px, 768px).

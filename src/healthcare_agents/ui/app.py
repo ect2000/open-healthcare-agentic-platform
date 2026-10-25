@@ -38,27 +38,48 @@ def main() -> None:
     render_header()
 
     with st.sidebar:
-        st.header("⚙️ Platform Control")
+        st.subheader("⚙️ Platform Control")
         api_health = api_client.check_health()
         api_ready = api_client.check_readiness()
 
-        if api_health and api_health.status == "healthy":
-            st.success(f"Backend API: Online (v{api_health.version})")
-        else:
-            st.error(f"Backend API: Offline at {API_BASE_URL}")
+        # Compact status panel
+        mode_val = api_ready.retrieval_mode if api_ready else "live"
+        mode_badge = "🧪 Fixtures" if mode_val == "fixtures" else "🟢 Live Federal"
+        ollama_status = (
+            "✅ Online" if (api_ready and api_ready.ollama_service_available) else "❌ Offline"
+        )
+        model_status = "✅ Available" if (api_ready and api_ready.model_installed) else "❌ Missing"
+        model_name = api_ready.model_name if api_ready else "gemma4:e2b"
+        api_online = bool(api_health and api_health.status == "healthy")
 
-        if api_ready:
-            st.info(
-                f"🧠 Model: `{api_ready.model_name}`\n\n"
-                f"📡 Retrieval Mode: `{api_ready.retrieval_mode}`\n\n"
-                f"Ollama Online: {'✅' if api_ready.ollama_service_available else '❌'}\n\n"
-                f"Model Available: {'✅' if api_ready.model_installed else '❌'}"
-            )
-        else:
-            st.warning("Backend readiness probe uncontactable.")
+        st.markdown(
+            f"""
+            <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 0.65rem 0.8rem; margin-bottom: 0.85rem; color: #f8fafc; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="color: #94a3b8;">Backend API:</span>
+                    <span style="font-weight: 600; color: {"#4ade80" if api_online else "#f87171"};">{"Online" if api_online else "Offline"}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="color: #94a3b8;">Retrieval Mode:</span>
+                    <span style="font-weight: 600; color: #38bdf8;">{mode_badge}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="color: #94a3b8;">Ollama Host:</span>
+                    <span style="font-weight: 600;">{ollama_status}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #94a3b8;">Model ({model_name}):</span>
+                    <span style="font-weight: 600;">{model_status}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown("---")
-        st.markdown("---")
+        st.markdown(
+            "<div style='border-top: 1px solid #334155; margin: 0.5rem 0 0.8rem 0;'></div>",
+            unsafe_allow_html=True,
+        )
         st.subheader("⚡ Quick Demonstrations")
         st.caption("Click a preset to populate the search query without auto-executing:")
 
@@ -118,6 +139,7 @@ def main() -> None:
             ):
                 st.session_state["selected_preset_idx"] = p["idx"]
                 st.session_state["query_input_text"] = p["query"]
+                st.session_state["search_query_field"] = p["query"]
                 st.rerun()
 
         mode_override = st.selectbox(
