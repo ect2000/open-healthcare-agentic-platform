@@ -1,0 +1,24 @@
+name: Documentation Improvement
+description: Suggest a fix or improvement to documentation or tutorials
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping us improve our documentation!
+  - type: input
+    id: page
+    attributes:
+      label: Documentation Page or File
+      description: What documentation file or guide needs improvement?
+      placeholder: e.g. README.md, docs/antigravity/M08-observability/demo-guide.md
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: Describe what is missing, outdated, or unclear, and how to improve it.
+      placeholder: Detailed description of the documentation enhancement.
+    validations:
+      required: true

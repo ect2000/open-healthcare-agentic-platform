@@ -114,7 +114,7 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Interactive Streamlit `"⚡ Agent Workflow & Query Fan-Out"` tab featuring an executed Mermaid pipeline diagram, planned vs. dispatched queries table, and concurrency breakdown.
   - Controlled benchmarking measuring a **42.75% retrieval latency reduction** (target $\ge 25\%$).
   - OpenTelemetry readiness: `query_id` and `dependency_ids` correlated on execution events.
-- [x] **Milestone M8 — OpenTelemetry, Prometheus, Tempo & Grafana Observability** *(Current Feature Branch)*:
+- [x] **Milestone M8 — OpenTelemetry, Prometheus, Tempo & Grafana Observability**:
   - Centralized `healthcare_agents.observability` subsystem with standard OpenTelemetry SDK, TracerProvider, MeterProvider, and OTLP Protobuf over HTTP exporters.
   - Full W3C distributed trace propagation across Streamlit UI, FastAPI service, LangGraph agent execution stages, concurrent parallel retrievers, and native host Ollama / Gemma 4 inference.
   - High-resolution application metrics tracking search requests, stage latencies, source-specific retrieval failures/timeouts/fallbacks, evidence quality counts (retrieved, retained, deduplicated, excluded), and real token metrics.
@@ -358,26 +358,50 @@ python -m build
 
 ---
 
-## 10. Current Implemented Functionality vs. Future Status
+## 10. Community-Driven Development & Open-Source Roadmap
 
-- **Currently Implemented (M1–M6)**:
-  - Packaging, configuration, environment validation, CLI commands (`health`, `model`, `search`, `serve`, `ui`).
-  - Local Gemma 4 serving via Ollama adapter (`src/healthcare_agents/models/`).
-  - LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/`).
-  - Four live public healthcare retrieval clients (NPPES, PubMed, CMS, MedlinePlus).
-  - Unified evidence normalization, deterministic deduplication, relevance scoring, and provenance tracking (`src/healthcare_agents/evidence/`).
-  - FastAPI service gateway with OpenAPI documentation and health probes (`src/healthcare_agents/api/`).
-  - Streamlit web application with presets, status tracking, and tabbed evidence cards (`src/healthcare_agents/ui/`).
-  - Multi-profile Docker Compose containerization (`docker-compose.yml`, `Dockerfile.api`, `Dockerfile.ui`, `scripts/bootstrap_model.sh`).
-  - Comprehensive offline unit/integration test suite (90%+ coverage) and Playwright browser validation.
-- **Future Milestones (M7)**:
-  - Kubernetes manifests, Helm charts, distributed tracing, and cluster-scale vLLM GPU serving.
+Milestones **M1 through M8** are completed, providing a proven foundation for evidence-grounded agentic search, multi-source retrieval, and distributed observability. Future milestones and platform enhancements are tracked transparently as community-driven GitHub issues.
 
-For detailed architecture details, refer to [docs/architecture/README.md](docs/architecture/README.md).
+### Open-Source Enhancement Issues
+
+| Area | GitHub Issue | Status | Focus |
+| :--- | :--- | :--- | :--- |
+| **Kubernetes Deployment** | [#4](https://github.com/hastimal/open-healthcare-agentic-platform/issues/4) | Open | M9: Declarative manifests, Helm charts, and cluster smoke tests |
+| **vLLM Inference** | [#5](https://github.com/hastimal/open-healthcare-agentic-platform/issues/5) | Open | Optional high-throughput OpenAI-compatible vLLM serving backend |
+| **Kubernetes Autoscaling** | [#6](https://github.com/hastimal/open-healthcare-agentic-platform/issues/6) | Open | Workload-aware horizontal pod autoscaling with HPA and KEDA |
+| **Observability Enhancements** | [#7](https://github.com/hastimal/open-healthcare-agentic-platform/issues/7) | Open | Prometheus alerting rules, log correlation, and error dashboards |
+| **Agentic AI Evaluation** | [#8](https://github.com/hastimal/open-healthcare-agentic-platform/issues/8) | Open | Quantitative groundedness, citation precision, and hallucination checks |
+| **Security & Privacy** | [#9](https://github.com/hastimal/open-healthcare-agentic-platform/issues/9) | Open | Container hardening, vulnerability scanning, and PHI redaction |
+| **Performance Benchmarks** | [#10](https://github.com/hastimal/open-healthcare-agentic-platform/issues/10) | Open | Repeatable Locust/k6 load testing and concurrency profiling |
+| **Healthcare Data Sources** | [#11](https://github.com/hastimal/open-healthcare-agentic-platform/issues/11) | Open | Additional public registries (ClinicalTrials.gov, openFDA, RxNorm) |
+| **Developer Experience** | [#12](https://github.com/hastimal/open-healthcare-agentic-platform/issues/12) | Open | Port diagnostics, onboarding improvements (`good first issue`) |
+| **CNCF Workshop** | [#13](https://github.com/hastimal/open-healthcare-agentic-platform/issues/13) | Open | Vendor-neutral interactive curriculum and workshop slides |
 
 ---
 
-## 10. Non-Clinical / Research Disclaimer
+## 11. Contributing & Community
+
+We welcome contributions from developers, researchers, healthcare informaticists, and open-source advocates!
+
+### How to Contribute:
+1. **Choose an Issue**: Browse open issues above or look for issues labeled [`good first issue`](https://github.com/hastimal/open-healthcare-agentic-platform/labels/good%20first%20issue) or [`help wanted`](https://github.com/hastimal/open-healthcare-agentic-platform/labels/help%20wanted).
+2. **Review Guidelines**: Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md).
+3. **Run the Demonstration Locally**:
+   ```bash
+   uv run python scripts/run_demo.py
+   ```
+4. **Run Quality Gates**:
+   ```bash
+   uv run ruff check .
+   uv run ruff format --check .
+   uv run mypy src tests
+   uv run pytest --cov=healthcare_agents --cov-report=term-missing
+   ```
+5. **Submit a Pull Request**: Create a dedicated branch, follow the [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md), and link your issue.
+
+---
+
+## 12. Non-Clinical / Research Disclaimer
 
 > **IMPORTANT DISCLAIMER**: This software is designed exclusively for research, education, and informational discovery. It is **NOT** a medical device, diagnostic tool, or clinical decision support system. It is not intended to diagnose, cure, mitigate, treat, or prevent any medical condition. Always consult a qualified healthcare professional regarding any medical diagnosis or treatment options.
 

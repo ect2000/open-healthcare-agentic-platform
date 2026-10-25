@@ -1,0 +1,49 @@
+name: Bug Report
+description: Create a report to help us improve the platform
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue!
+        Please verify that this is not a duplicate before submitting.
+  - type: input
+    id: environment
+    attributes:
+      label: Environment Details
+      description: OS (macOS/Linux/WSL), Python version, Docker version, and Ollama version
+      placeholder: e.g. macOS Sonoma (M3 Pro), Python 3.12.7, Docker Desktop 4.34, Ollama 0.5.1
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+      placeholder: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the behavior.
+      placeholder: |
+        1. Run `uv run python scripts/run_demo.py`
+        2. Query '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Error Output
+      description: Paste any terminal logs or stack traces (ensure no sensitive info/keys are included).
+      render: shell
