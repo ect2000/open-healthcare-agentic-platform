@@ -96,6 +96,8 @@ class ExecutionEvent(BaseModel):
     trace_id: str | None = None
     span_id: str | None = None
     parent_span_id: str | None = None
+    query_id: str | None = None
+    dependency_ids: list[str] = Field(default_factory=list)
     stage: str
     tool_name: str | None = None
     status: str = "completed"  # completed, failed, skipped
@@ -114,6 +116,7 @@ class SearchResponse(BaseModel):
     request_id: str
     query: str
     interpreted_intent: dict[str, Any]
+    retrieval_mode: str = "live"
     provider_candidates: list[EvidenceItemResponse]
     clinical_research: list[EvidenceItemResponse]
     cms_quality_data: list[EvidenceItemResponse]
@@ -127,4 +130,5 @@ class SearchResponse(BaseModel):
     execution_metadata: dict[str, Any]
     limitations_disclaimer: str
     created_at: str
+    fanout_plan: dict[str, Any] = Field(default_factory=dict)
     execution_events: list[ExecutionEvent] = Field(default_factory=list)

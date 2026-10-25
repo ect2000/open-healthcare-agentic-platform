@@ -9,6 +9,7 @@ import streamlit as st
 from healthcare_agents.api.schemas import SearchResponse
 from healthcare_agents.ui.api_client import HealthcareApiClient
 from healthcare_agents.ui.components import (
+    render_agent_workflow_and_fanout,
     render_cms_data_section,
     render_disclaimer_banner,
     render_execution_observability,
@@ -87,7 +88,10 @@ def main() -> None:
     elif demo_4:
         preset_query = "Compare publicly available provider data and clinical literature for pediatric dentists in Houston"
 
-    render_disclaimer_banner(is_synthetic=(selected_mode == "fixtures"))
+    render_disclaimer_banner(
+        is_synthetic=(selected_mode == "fixtures"),
+        retrieval_mode=selected_mode or "live",
+    )
 
     st.subheader("🔎 Discover Healthcare Providers & Clinical Evidence")
     with st.form("search_form", clear_on_submit=False):
@@ -154,14 +158,17 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
 
-        tab_providers, tab_research, tab_education, tab_cms, tab_observability = st.tabs(
-            [
-                f"🩺 Providers ({len(resp.provider_candidates)})",
-                f"🔬 Research ({len(resp.clinical_research)})",
-                f"📖 Patient Education ({len(resp.patient_education)})",
-                f"🏛️ CMS Quality ({len(resp.cms_quality_data)})",
-                f"🧠 Agent Execution & Observability ({len(resp.execution_events)})",
-            ]
+        tab_providers, tab_research, tab_education, tab_cms, tab_workflow, tab_observability = (
+            st.tabs(
+                [
+                    f"🩺 Providers ({len(resp.provider_candidates)})",
+                    f"🔬 Research ({len(resp.clinical_research)})",
+                    f"📖 Patient Education ({len(resp.patient_education)})",
+                    f"🏛️ CMS Quality ({len(resp.cms_quality_data)})",
+                    "⚡ Agent Workflow & Query Fan-Out",
+                    f"🧠 Execution Telemetry ({len(resp.execution_events)})",
+                ]
+            )
         )
 
         with tab_providers:
@@ -196,6 +203,9 @@ def main() -> None:
 
         with tab_cms:
             render_cms_data_section(resp.cms_quality_data, resp.missing_information)
+
+        with tab_workflow:
+            render_agent_workflow_and_fanout(resp)
 
         with tab_observability:
             render_execution_observability(resp)

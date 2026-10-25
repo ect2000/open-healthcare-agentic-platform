@@ -105,11 +105,11 @@ def create_healthcare_graph(
 ) -> StateGraph[HealthcareWorkflowState]:
     """Build and return an uncompiled StateGraph for healthcare multi-agent discovery."""
     from healthcare_agents.agents.answer import synthesize_answer
-    from healthcare_agents.agents.evidence import retrieve_evidence
     from healthcare_agents.agents.evidence_processor import process_evidence_node
     from healthcare_agents.agents.planner import plan_query
-    from healthcare_agents.agents.provider import retrieve_providers
     from healthcare_agents.agents.validator import validate_records
+    from healthcare_agents.planning.fanout import generate_fanout_plan
+    from healthcare_agents.retrieval.parallel_retriever import execute_parallel_retrieval
 
     workflow: StateGraph[HealthcareWorkflowState] = StateGraph(HealthcareWorkflowState)
     resolved_provider_retriever = (
@@ -141,9 +141,23 @@ def create_healthcare_graph(
             plan = res.get("search_plan", {})
             spec = plan.get("specialty", "")
             city_st = f"{plan.get('city', '')}, {plan.get('state', '')}"
-            topics_str = str(plan.get("evidence_topics", []))
-            output_sum = f"Plan: {spec} in {city_st}; topics: {topics_str}"
-            return {**res, "execution_events": events}
+
+            # Generate structured multi-source fan-out plan
+            fanout = generate_fanout_plan(
+                request_id=req_id,
+                original_query=state.get("original_query", ""),
+                search_plan=plan,
+                model_adapter=model_adapter,
+            )
+            output_sum = (
+                f"Plan: {spec} in {city_st}; {len(fanout.queries)} queries planned across "
+                f"NPPES, PubMed, MedlinePlus, CMS"
+            )
+            return {
+                **res,
+                "fanout_plan": fanout.model_dump(),
+                "execution_events": events,
+            }
         except Exception as e:
             status = "failed"
             err_type = type(e).__name__
@@ -169,185 +183,69 @@ def create_healthcare_graph(
                 }
             )
 
-    def provider_node(state: HealthcareWorkflowState) -> dict[str, Any]:
+    def retrieval_orchestrator_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         req_id = state.get("request_id", "")
         events = list(state.get("execution_events", []))
-        plan = state.get("search_plan", {})
-        spec = plan.get("specialty") or "healthcare provider"
-        city = plan.get("city") or ""
-        state_cd = plan.get("state") or ""
-        nppes_query = f"specialty='{spec}', city='{city}', state='{state_cd}'"
+        errors = list(state.get("errors", []))
+        fanout_dict = state.get("fanout_plan", {})
 
-        # 1. NPPES Provider Registry
-        t0_nppes = time.perf_counter()
-        t_start_nppes = datetime.now(UTC).isoformat()
-        status_nppes = "completed"
-        err_nppes = None
-        candidates = []
-        try:
-            candidates = list(
-                resolved_provider_retriever.search_providers(
-                    specialty=plan.get("specialty"),
-                    city=plan.get("city"),
-                    state=plan.get("state"),
-                    limit=5,
-                )
-            )
-            if not candidates and plan.get("specialty") and (plan.get("city") or plan.get("state")):
-                candidates = list(
-                    resolved_provider_retriever.search_providers(
-                        specialty=plan.get("specialty"),
-                        limit=5,
-                    )
-                )
-        except Exception as exc:
-            status_nppes = "failed"
-            err_nppes = type(exc).__name__
-        finally:
-            t1_nppes = time.perf_counter()
-            events.append(
-                {
-                    "request_id": req_id,
-                    "stage": "NPPES Retrieval",
-                    "tool_name": type(resolved_provider_retriever).__name__,
-                    "status": status_nppes,
-                    "start_time": t_start_nppes,
-                    "end_time": datetime.now(UTC).isoformat(),
-                    "duration_ms": round((t1_nppes - t0_nppes) * 1000.0, 2),
-                    "query_summary": nppes_query,
-                    "result_count": len(candidates),
-                    "error_type": err_nppes,
-                    "output_summary": f"Retrieved {len(candidates)} provider records",
-                }
+        from healthcare_agents.planning.fanout_schema import FanOutPlan
+
+        if fanout_dict:
+            fanout = FanOutPlan.model_validate(fanout_dict)
+        else:
+            fanout = generate_fanout_plan(
+                request_id=req_id,
+                original_query=state.get("original_query", ""),
+                search_plan=state.get("search_plan", {}),
+                model_adapter=model_adapter,
             )
 
-        # 2. CMS Quality Data
-        t0_cms = time.perf_counter()
-        t_start_cms = datetime.now(UTC).isoformat()
-        status_cms = "completed"
-        err_cms = None
-        cms_quality = []
-        unmatched_cms = []
-        npis_queried = [p.npi for p in candidates if p.npi and p.npi.isdigit() and len(p.npi) == 10]
-        try:
-            for npi_val in npis_queried:
-                try:
-                    records = resolved_quality_retriever.get_provider_quality(npi=npi_val)
-                    for q_rec in records:
-                        if q_rec.npi == npi_val:
-                            cms_quality.append(q_rec)
-                        else:
-                            unmatched_cms.append(q_rec)
-                except Exception as q_exc:
-                    err_cms = type(q_exc).__name__
-        except Exception as exc:
-            status_cms = "failed"
-            err_cms = type(exc).__name__
-        finally:
-            t1_cms = time.perf_counter()
-            events.append(
-                {
-                    "request_id": req_id,
-                    "stage": "CMS Retrieval",
-                    "tool_name": type(resolved_quality_retriever).__name__,
-                    "status": status_cms,
-                    "start_time": t_start_cms,
-                    "end_time": datetime.now(UTC).isoformat(),
-                    "duration_ms": round((t1_cms - t0_cms) * 1000.0, 2),
-                    "query_summary": f"NPIs: {npis_queried[:3]} ({len(npis_queried)} total)"
-                    if npis_queried
-                    else "No candidate NPIs",
-                    "result_count": len(cms_quality),
-                    "error_type": err_cms,
-                    "output_summary": f"Retrieved {len(cms_quality)} CMS quality metric records",
-                }
-            )
-
-        res = retrieve_providers(
-            state=state,
+        # Execute parallel retrieval
+        parallel_results = execute_parallel_retrieval(
+            fanout_plan=fanout,
             provider_retriever=resolved_provider_retriever,
-            quality_retriever=resolved_quality_retriever,
-        )
-        return {**res, "execution_events": events}
-
-    def evidence_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        req_id = state.get("request_id", "")
-        events = list(state.get("execution_events", []))
-        plan = state.get("search_plan", {})
-        topics = plan.get("evidence_topics", [])
-        topic_str = " ".join(topics) if topics else state.get("original_query", "")
-
-        # 3. PubMed Retrieval
-        t0_pubmed = time.perf_counter()
-        t_start_pubmed = datetime.now(UTC).isoformat()
-        status_pubmed = "completed"
-        err_pubmed = None
-        pubmed_count = 0
-        try:
-            pub_res = list(resolved_evidence_retriever.search_evidence(topic=topic_str, limit=5))
-            pubmed_count = len(
-                [x for x in pub_res if x.evidence_type in ("research_study", "clinical_guideline")]
-            )
-        except Exception as exc:
-            status_pubmed = "failed"
-            err_pubmed = type(exc).__name__
-        finally:
-            t1_pubmed = time.perf_counter()
-            events.append(
-                {
-                    "request_id": req_id,
-                    "stage": "PubMed Retrieval",
-                    "tool_name": type(resolved_evidence_retriever).__name__,
-                    "status": status_pubmed,
-                    "start_time": t_start_pubmed,
-                    "end_time": datetime.now(UTC).isoformat(),
-                    "duration_ms": round((t1_pubmed - t0_pubmed) * 1000.0, 2),
-                    "query_summary": f"topic='{topic_str[:80]}'",
-                    "result_count": pubmed_count,
-                    "error_type": err_pubmed,
-                    "output_summary": f"Retrieved {pubmed_count} PubMed research articles",
-                }
-            )
-
-        # 4. MedlinePlus Retrieval
-        t0_medline = time.perf_counter()
-        t_start_medline = datetime.now(UTC).isoformat()
-        status_medline = "completed"
-        err_medline = None
-        medline_count = 0
-        medline_query = topics[0] if topics else topic_str
-        try:
-            med_res = list(
-                resolved_education_retriever.search_topics(keyword=medline_query, limit=5)
-            )
-            medline_count = len(med_res)
-        except Exception as exc:
-            status_medline = "failed"
-            err_medline = type(exc).__name__
-        finally:
-            t1_medline = time.perf_counter()
-            events.append(
-                {
-                    "request_id": req_id,
-                    "stage": "MedlinePlus Retrieval",
-                    "tool_name": type(resolved_education_retriever).__name__,
-                    "status": status_medline,
-                    "start_time": t_start_medline,
-                    "end_time": datetime.now(UTC).isoformat(),
-                    "duration_ms": round((t1_medline - t0_medline) * 1000.0, 2),
-                    "query_summary": f"keyword='{medline_query[:80]}'",
-                    "result_count": medline_count,
-                    "error_type": err_medline,
-                    "output_summary": f"Retrieved {medline_count} patient education topics",
-                }
-            )
-
-        res = retrieve_evidence(
-            state=state,
             evidence_retriever=resolved_evidence_retriever,
             patient_education_retriever=resolved_education_retriever,
+            quality_retriever=resolved_quality_retriever,
+            max_workers=4,
         )
-        return {**res, "execution_events": events}
+
+        # Merge execution events from parallel branches
+        for ev in parallel_results.get("execution_events", []):
+            events.append(ev)
+
+        # Build citations
+        citations = list(state.get("citations", []))
+        for item in parallel_results.get("clinical_evidence", []):
+            url_part = f" <{item.pubmed_url}>" if item.pubmed_url else ""
+            cite = f"[{item.source}: {item.citation_ref}] {item.title} ({item.year}){url_part}"
+            if cite not in citations:
+                citations.append(cite)
+
+        for edu_item in parallel_results.get("patient_education_evidence", []):
+            url_display = edu_item.official_url or edu_item.pubmed_url
+            url_part = f" <{url_display}>" if url_display else ""
+            cite = (
+                f"[{edu_item.source}: {edu_item.citation_ref}] "
+                f"{edu_item.title} ({edu_item.year}){url_part}"
+            )
+            if cite not in citations:
+                citations.append(cite)
+
+        errors.extend(parallel_results.get("errors", []))
+
+        return {
+            "provider_candidates": parallel_results.get("provider_candidates", []),
+            "clinical_evidence": parallel_results.get("clinical_evidence", []),
+            "patient_education_evidence": parallel_results.get("patient_education_evidence", []),
+            "cms_quality": parallel_results.get("cms_quality", []),
+            "unmatched_cms_records": parallel_results.get("unmatched_cms_records", []),
+            "fanout_plan": parallel_results.get("fanout_plan", {}),
+            "citations": citations,
+            "execution_events": events,
+            "errors": errors,
+        }
 
     def processor_node(state: HealthcareWorkflowState) -> dict[str, Any]:
         req_id = state.get("request_id", "")
@@ -372,6 +270,11 @@ def create_healthcare_graph(
             raise
         finally:
             t1 = time.perf_counter()
+            raw_prov = len(state.get("provider_candidates", []))
+            raw_clin = len(state.get("clinical_evidence", []))
+            raw_edu = len(state.get("patient_education_evidence", []))
+            raw_cms = len(state.get("cms_quality", []))
+            raw_total = raw_prov + raw_clin + raw_edu + raw_cms
             events.append(
                 {
                     "request_id": req_id,
@@ -382,13 +285,17 @@ def create_healthcare_graph(
                     "end_time": datetime.now(UTC).isoformat(),
                     "duration_ms": round((t1 - t0) * 1000.0, 2),
                     "query_summary": (
-                        f"Process {len(state.get('provider_candidates', []))} providers, "
-                        f"{len(state.get('clinical_evidence', []))} clinical, "
-                        f"{len(state.get('patient_education_evidence', []))} education"
+                        f"Input retrieved: {raw_total} total ({raw_prov} providers, "
+                        f"{raw_clin} research, {raw_edu} education, {raw_cms} CMS)"
                     ),
                     "result_count": item_count,
                     "error_type": err_type,
-                    "output_summary": output_sum,
+                    "output_summary": (
+                        f"Retained: {item_count} normalized & ranked items "
+                        f"({len(res.get('excluded_evidence', []))} excluded)"
+                        if status == "completed"
+                        else output_sum
+                    ),
                 }
             )
 
@@ -466,18 +373,16 @@ def create_healthcare_graph(
             )
 
     workflow.add_node("planner", planner_node)
-    workflow.add_node("provider_retrieval", provider_node)
-    workflow.add_node("evidence_retrieval", evidence_node)
+    workflow.add_node("retrieval_orchestrator", retrieval_orchestrator_node)
     workflow.add_node("evidence_processor", processor_node)
     workflow.add_node("validator", validation_node)
     workflow.add_node("answer_synthesis", answer_node)
 
-    # Flow: START -> planner -> provider_retrieval -> evidence_retrieval
+    # Flow: START -> planner -> retrieval_orchestrator (parallel NPPES/PubMed/MedlinePlus + CMS)
     # -> evidence_processor -> validator -> answer_synthesis -> END
     workflow.add_edge(START, "planner")
-    workflow.add_edge("planner", "provider_retrieval")
-    workflow.add_edge("provider_retrieval", "evidence_retrieval")
-    workflow.add_edge("evidence_retrieval", "evidence_processor")
+    workflow.add_edge("planner", "retrieval_orchestrator")
+    workflow.add_edge("retrieval_orchestrator", "evidence_processor")
     workflow.add_edge("evidence_processor", "validator")
     workflow.add_edge("validator", "answer_synthesis")
     workflow.add_edge("answer_synthesis", END)

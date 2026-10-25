@@ -311,6 +311,8 @@ class HealthcareSearchService:
                 trace_id=ev.get("trace_id"),
                 span_id=ev.get("span_id"),
                 parent_span_id=ev.get("parent_span_id"),
+                query_id=ev.get("query_id"),
+                dependency_ids=ev.get("dependency_ids", []),
                 stage=ev.get("stage", "Unknown"),
                 tool_name=ev.get("tool_name"),
                 status=ev.get("status", "completed"),
@@ -329,6 +331,7 @@ class HealthcareSearchService:
             request_id=req_id,
             query=request.query,
             interpreted_intent=dict(final_state.get("search_plan", {})),
+            retrieval_mode=effective_mode,
             provider_candidates=providers,
             clinical_research=research,
             cms_quality_data=cms,
@@ -342,5 +345,6 @@ class HealthcareSearchService:
             execution_metadata=exec_metadata,
             limitations_disclaimer=DISCLAIMER_TEXT,
             created_at=created_at,
+            fanout_plan=final_state.get("fanout_plan", {}),
             execution_events=events,
         )

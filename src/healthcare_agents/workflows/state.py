@@ -43,6 +43,7 @@ class HealthcareWorkflowState(TypedDict, total=False):
     request_id: str
     original_query: str
     search_plan: SearchPlan
+    fanout_plan: dict[str, Any]
     provider_candidates: list[ProviderRecord]
     clinical_evidence: list[ClinicalEvidenceRecord]
     patient_education_evidence: list[ClinicalEvidenceRecord]

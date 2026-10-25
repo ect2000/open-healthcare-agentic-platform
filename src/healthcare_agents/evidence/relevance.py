@@ -226,6 +226,30 @@ def assess_medlineplus_relevance(
         matched.append("anxiety/phobia")
 
     # Dental query guardrail: exclude unrelated broad medical topics
+    # (eating disorders, substance abuse, dementia, etc.)
+    unrelated_conditions = (
+        "eating disorder",
+        "substance abuse",
+        "drugs and young",
+        "dementia",
+        "obesity",
+        "anorexia",
+        "bulimia",
+    )
+    if any(cond in title for cond in unrelated_conditions) and (
+        "dent" in query_lower or "dental" in query_lower
+    ):
+        return RelevanceAssessment(
+            score=0.05,
+            is_relevant=False,
+            selection_reason="",
+            exclusion_reason=(
+                f"Topic '{item.title_or_name}' addresses an unrelated medical condition "
+                f"rather than dental care or dental fear."
+            ),
+            matched_terms=(),
+        )
+
     if ("dent" in query_lower or "dental" in query_lower) and not any(
         t in combined_text for t in ("dent", "teeth", "tooth", "oral", "mouth", "anxiety", "phobia")
     ):
