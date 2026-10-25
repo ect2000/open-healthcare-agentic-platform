@@ -121,7 +121,7 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Provisioned Docker Compose observability stack featuring OpenTelemetry Collector, Prometheus, Grafana Tempo, and Grafana with automated provisioning.
   - Pre-built 6-section Grafana monitoring dashboard: **"Open Healthcare Agentic AI — Observability"** (`uid: healthcare-observability`).
   - Interactive Streamlit distributed trace correlation with deep-linking directly into Grafana Tempo trace exploration.
-  - One-command demonstration launcher (`python scripts/run_m8_demo.py`) with complete container and host service health verification.
+  - One-command demonstration launcher (`python scripts/run_demo.py`) with complete container and host service health verification.
 
 ---
 

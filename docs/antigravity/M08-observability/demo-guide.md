@@ -52,11 +52,12 @@ Milestone M8 equips the platform with production-grade distributed tracing and t
 
 ## One-Command Launcher
 
-Run the automated launcher to verify prerequisites, check native Ollama connectivity, boot the Docker Compose stack, verify endpoints, and print connection links:
+Run the automated launcher to verify prerequisites, check native Ollama connectivity, boot the Docker Compose stack, verify endpoints, open Streamlit in the browser, and print connection links:
 
 ```bash
-uv run python scripts/run_m8_demo.py
+uv run python scripts/run_demo.py
 ```
+*(Pass `--no-browser` to prevent automatic browser launch).*
 
 ### Manual Docker Compose Commands
 

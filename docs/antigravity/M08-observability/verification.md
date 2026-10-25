@@ -18,7 +18,7 @@
 | **Grafana Dashboards** | Provisioned 6-section dashboard (`healthcare-observability`)| Auto-loaded on port 3000, panels active | **PASS** |
 | **Streamlit Correlation** | UI displays trace ID and direct Grafana link | Trace ID card & Tempo deep link rendered | **PASS** |
 | **Failure Observability** | Controlled failure & timeout resilience | Errors recorded on spans; collector outage safe | **PASS** |
-| **One-Command Launcher** | Automated readiness checker and launcher | `scripts/run_m8_demo.py` operational | **PASS** |
+| **One-Command Launcher** | Automated readiness checker and launcher | `scripts/run_demo.py` operational | **PASS** |
 | **Test Suite** | Full pytest suite passes | **173 passed**, 15 skipped | **PASS** |
 | **Code Coverage** | Overall coverage $\ge 90\%$ | **90.21%** confirmed | **PASS** |
 | **Linting & Formatting** | Ruff checks pass cleanly | All checks passed, 146 files formatted | **PASS** |

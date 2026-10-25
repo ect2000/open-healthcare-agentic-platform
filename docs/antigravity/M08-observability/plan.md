@@ -54,5 +54,5 @@ Milestone M8 establishes production-grade observability across the Open Healthca
    - Unit and integration tests for metrics and tracing.
    - Controlled failure observability tests (timeouts, API errors, zero results).
    - Automated screenshot capture with Playwright.
-   - One-command demonstration script (`scripts/run_m8_demo.py`).
+   - One-command demonstration script (`scripts/run_demo.py`).
    - Linting, formatting, type checking, and $\ge 90\%$ test coverage.
