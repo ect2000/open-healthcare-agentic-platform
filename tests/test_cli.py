@@ -14,7 +14,7 @@ def test_cli_version(capsys: pytest.CaptureFixture[str]) -> None:
         main(["--version"])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "healthcare-agents 0.5.0" in captured.out or "healthcare-agents 0.5.0" in captured.err
+    assert "healthcare-agents 0.6.0" in captured.out or "healthcare-agents 0.6.0" in captured.err
 
 
 def test_cli_health_subcommand(capsys: pytest.CaptureFixture[str]) -> None:

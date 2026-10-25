@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1
+# ------------------------------------------------------------------------------
+# Production Dockerfile for Streamlit Interactive Frontend
+# ------------------------------------------------------------------------------
+
+# Stage 1: Build & wheels generation
+FROM python:3.12-slim-bookworm AS builder
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy packaging specifications
+COPY pyproject.toml README.md LICENSE /build/
+COPY src/ /build/src/
+
+# Build wheels
+RUN pip install --upgrade pip build && \
+    python -m build --wheel --outdir /build/dist
+
+# Stage 2: Runtime image
+FROM python:3.12-slim-bookworm AS runner
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+# Install runtime dependencies including curl for health checks
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root application user
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /bin/bash -m appuser
+
+WORKDIR /app
+
+# Copy built wheel from builder stage and install
+COPY --from=builder /build/dist/*.whl /tmp/
+RUN pip install --no-cache-dir /tmp/*.whl && \
+    rm -rf /tmp/*.whl
+
+# Switch to non-root user
+USER appuser:appgroup
+
+# Health check against Streamlit internal health probe
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+
+EXPOSE 8501
+
+# Execute Streamlit frontend via CLI command with signal propagation
+ENTRYPOINT ["healthcare-agents", "ui", "--port", "8501"]

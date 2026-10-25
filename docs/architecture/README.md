@@ -1,7 +1,7 @@
 # Target Architecture: Open Healthcare Agentic Platform
 
 > **Status Notice:** This document describes the **TARGET ARCHITECTURE** for the platform.  
-> As of Milestone M5 (FastAPI + Streamlit Web Application), the full presentation layer and unified 4-source LangGraph agentic discovery engine are operational:
+> As of Milestone M6 (Docker Compose Containerization), the platform provides complete multi-profile containerization:
 > 1. **Live CMS NPPES Registry API v2.1 client** (`src/healthcare_agents/retrieval/nppes_client.py`)
 > 2. **Live NCBI Entrez PubMed literature client** (`src/healthcare_agents/retrieval/pubmed_client.py`)
 > 3. **Live CMS Provider Data Catalog client** (`src/healthcare_agents/retrieval/cms_client.py`)
@@ -9,7 +9,8 @@
 > 5. **Unified Evidence Processing Layer** (`src/healthcare_agents/evidence/`)
 > 6. **FastAPI REST Service** (`src/healthcare_agents/api/`)
 > 7. **Streamlit Interactive Frontend** (`src/healthcare_agents/ui/`)
-> Kubernetes deployments and OpenTelemetry observability (M6) are planned for upcoming milestones.
+> 8. **Docker Compose Multi-Profile Deployment** (`docker-compose.yml`, `Dockerfile.api`, `Dockerfile.ui`)
+> Kubernetes deployments and OpenTelemetry observability (M7) are planned for upcoming milestones.
 
 ---
 

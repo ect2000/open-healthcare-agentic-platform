@@ -87,37 +87,48 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Explainable source-specific relevance and ranking (no fabricated universal clinician quality score).
   - Explicit topical regression guards (rejection of unrelated studies such as PMID 39046104 dementia GWAS for pediatric dental queries).
   - Traceable source provenance ledger verifying authorized domains (`nih.gov`, `cms.gov`, `hhs.gov`) and citation boundaries.
-- [x] **Milestone M5 — FastAPI + Streamlit Web Application** *(Current)*:
+- [x] **Milestone M5 — FastAPI + Streamlit Web Application**:
   - High-performance FastAPI REST backend (`healthcare_agents.api`) supporting `/health`, `/ready`, `/api/v1/status`, and `/api/v1/search`.
   - Reusable execution service orchestrating LangGraph multi-agent discovery.
   - Interactive, professional Streamlit web application (`healthcare_agents.ui`) with quick clinical presets, real-time readiness status, and 4 tabbed result views.
   - Expandable provenance audit ledger with official verification badges and cryptographic digest verification.
   - Streamlit automated browser testing and real screenshot capture via Playwright.
-  - New CLI commands: `healthcare-agents serve` and `healthcare-agents ui`.
-- [ ] **Milestone M6 — Docker, Kubernetes, vLLM & OpenTelemetry**:
-  - Production containerization, Helm charts, distributed tracing, and GPU serving.
+  - CLI commands: `healthcare-agents serve` and `healthcare-agents ui`.
+- [x] **Milestone M6 — Docker Compose Containerization** *(Current)*:
+  - Production-ready multi-stage Dockerfiles (`Dockerfile.api` and `Dockerfile.ui`) with non-root security (`appuser:10001`) and minimal ~198MB image sizes.
+  - Multi-profile Docker Compose configuration (`docker-compose.yml`):
+    - **Profile A (Recommended Apple Silicon Profile)**: Runs API and UI in Docker containers, connecting to native host Ollama (`host.docker.internal:11434`) for full Metal GPU hardware acceleration.
+    - **Profile B (Containerized Ollama Profile)**: Runs complete containerized stack (`--profile container-ollama`) with persistent model volume (`open-healthcare-ollama-models`) and model bootstrap script (`scripts/bootstrap_model.sh`).
+  - Internal Docker DNS networking (`healthcare-net`), container health checks, and restart recovery.
+  - Browser verification via Playwright capturing real container screenshots (`docs/images/m6_container_ui.png`, `docs/images/m6_container_results.png`).
+- [ ] **Milestone M7 — Kubernetes, Helm, vLLM & OpenTelemetry**:
+  - Production Kubernetes manifests, Helm charts, distributed tracing, and cluster-scale vLLM GPU serving.
 
 ---
 
 ## 5. Workflow Architecture & User Interface
 
-### Milestone M5 — Presentation Layer & Full System Architecture (Current)
+### Milestone M6 — Docker Compose Container Architecture (Current)
 
-The complete end-to-end platform architecture connects the Streamlit UI, FastAPI service gateway, and LangGraph multi-agent discovery core across all four live healthcare data sources:
+The containerized platform architecture encapsulates the FastAPI service gateway, the Streamlit UI, and the multi-agent LangGraph core with dual-profile model execution:
+
+![M6 Container Architecture](docs/images/m6_workflow.png)
+
+### Containerized Streamlit Web Interface
+
+The Streamlit web application running inside Docker provides a responsive, evidence-backed discovery interface for clinicians, researchers, and patients:
+
+![Containerized Streamlit Search Interface](docs/images/m6_container_ui.png)
+
+*Figure: Initial Streamlit interface running in Docker (`http://localhost:8501`), demonstrating preset clinical discovery scenarios, system readiness badges, and safety disclaimers.*
+
+![Containerized Grounded Discovery Results](docs/images/m6_container_results.png)
+
+*Figure: Containerized multi-agent discovery results with grounded narrative synthesis, validated NPPES provider credentials, PubMed research citations, MedlinePlus patient guidance, and the cryptographic provenance audit ledger.*
+
+### Milestone M5 — Presentation Layer & Full System Architecture
 
 ![M5 System Architecture](docs/images/m5_workflow.png)
-
-### Live Streamlit Web Interface
-
-The Streamlit web application provides a responsive, evidence-backed discovery interface for clinicians, researchers, and patients:
-
-![Streamlit Search Interface](docs/images/m5_streamlit_ui.png)
-
-*Figure: Initial Streamlit interface showing preset clinical discovery scenarios, system readiness badges, and safety disclaimers.*
-
-![Streamlit Grounded Discovery Results](docs/images/m5_streamlit_results.png)
-
-*Figure: Multi-agent discovery results with grounded narrative synthesis, validated NPPES provider credentials, PubMed research citations, MedlinePlus patient guidance, and the cryptographic provenance audit ledger.*
 
 ### Milestone M4E — Unified Evidence Processing & Multi-Source Discovery
 
@@ -194,7 +205,37 @@ healthcare-agents ui --port 8501
 
 ---
 
-## 8. Running Automated Tests & Code Quality
+## 8. Docker Compose Deployment (Milestone M6)
+
+The platform supports dual Docker Compose execution profiles:
+
+### Profile A: Recommended Apple Silicon Development Profile
+Runs the FastAPI service and Streamlit UI in lightweight Docker containers while connecting to your native host Ollama instance via `host.docker.internal:11434` for full Apple Silicon Metal GPU acceleration:
+
+```bash
+# Build and launch API (port 8000) and UI (port 8501)
+docker compose up -d --build
+
+# Inspect container health and readiness
+docker compose ps
+curl -s http://localhost:8000/ready
+curl -s http://localhost:8501/_stcore/health
+
+# Open Streamlit in your browser
+open http://localhost:8501
+```
+
+### Profile B: Fully Containerized Demonstration Profile
+Runs the entire stack in Docker containers, including the official Ollama container and model bootstrapper:
+
+```bash
+# Start all services with containerized Ollama and persistent model volume
+docker compose --profile container-ollama up -d --build
+```
+
+---
+
+## 9. Running Automated Tests & Code Quality
 
 Run tests offline with code coverage:
 ```bash
@@ -224,9 +265,9 @@ python -m build
 
 ---
 
-## 9. Current Implemented Functionality vs. Future Status
+## 10. Current Implemented Functionality vs. Future Status
 
-- **Currently Implemented (M1–M5)**:
+- **Currently Implemented (M1–M6)**:
   - Packaging, configuration, environment validation, CLI commands (`health`, `model`, `search`, `serve`, `ui`).
   - Local Gemma 4 serving via Ollama adapter (`src/healthcare_agents/models/`).
   - LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/`).
@@ -234,9 +275,10 @@ python -m build
   - Unified evidence normalization, deterministic deduplication, relevance scoring, and provenance tracking (`src/healthcare_agents/evidence/`).
   - FastAPI service gateway with OpenAPI documentation and health probes (`src/healthcare_agents/api/`).
   - Streamlit web application with presets, status tracking, and tabbed evidence cards (`src/healthcare_agents/ui/`).
+  - Multi-profile Docker Compose containerization (`docker-compose.yml`, `Dockerfile.api`, `Dockerfile.ui`, `scripts/bootstrap_model.sh`).
   - Comprehensive offline unit/integration test suite (90%+ coverage) and Playwright browser validation.
-- **Future Milestones (M6)**:
-  - Production containerization (Docker, Kubernetes, vLLM, Helm) and OpenTelemetry in M6.
+- **Future Milestones (M7)**:
+  - Kubernetes manifests, Helm charts, distributed tracing, and cluster-scale vLLM GPU serving.
 
 For detailed architecture details, refer to [docs/architecture/README.md](docs/architecture/README.md).
 

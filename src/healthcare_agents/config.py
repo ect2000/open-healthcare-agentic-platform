@@ -85,7 +85,8 @@ class Settings:
                 f"{', '.join(sorted(_VALID_MODEL_PROVIDERS))}."
             )
 
-        model_name = source.get("MODEL_NAME", "gemma4:e2b").strip()
+        raw_model_name = source.get("OLLAMA_MODEL") or source.get("MODEL_NAME", "gemma4:e2b")
+        model_name = raw_model_name.strip()
         if not model_name:
             raise ConfigurationError("MODEL_NAME must not be empty.")
 

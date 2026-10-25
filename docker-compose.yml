@@ -1,0 +1,134 @@
+# ------------------------------------------------------------------------------
+# Open Healthcare Agentic Platform: Multi-Profile Docker Compose Configuration
+# ------------------------------------------------------------------------------
+# Profiles:
+#   1. Default profile (host-ollama): Runs containerized API and Streamlit UI.
+#      Connects to host-native Ollama via host.docker.internal (recommended for Apple Silicon).
+#      Usage: docker compose up -d --build
+#
+#   2. Full profile (container-ollama): Runs containerized API, UI, and Ollama service.
+#      Includes persistent named volume for model storage and model bootstrap container.
+#      Usage: docker compose --profile container-ollama up -d --build
+# ------------------------------------------------------------------------------
+
+services:
+  # ----------------------------------------------------------------------------
+  # FastAPI Gateway & Healthcare Search Service
+  # ----------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: open-healthcare-api:latest
+    container_name: open-healthcare-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - HEALTHCARE_AGENTS_ENV=${HEALTHCARE_AGENTS_ENV:-development}
+      - HEALTHCARE_AGENTS_LOG_LEVEL=${HEALTHCARE_AGENTS_LOG_LEVEL:-INFO}
+      - MODEL_PROVIDER=ollama
+      - MODEL_NAME=${OLLAMA_MODEL:-${MODEL_NAME:-gemma4:e2b}}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - MODEL_TIMEOUT_SECONDS=${MODEL_TIMEOUT_SECONDS:-180}
+      - RETRIEVAL_MODE=${RETRIEVAL_MODE:-live}
+      - NPPES_API_URL=${NPPES_API_URL:-https://npiregistry.cms.hhs.gov/api/}
+      - NPPES_TIMEOUT_SECONDS=${NPPES_TIMEOUT_SECONDS:-15}
+      - PUBMED_API_URL=${PUBMED_API_URL:-https://eutils.ncbi.nlm.nih.gov/entrez/eutils/}
+      - PUBMED_TIMEOUT_SECONDS=${PUBMED_TIMEOUT_SECONDS:-15}
+      - CMS_API_URL=${CMS_API_URL:-https://data.cms.gov/provider-data/api/1/}
+      - CMS_TIMEOUT_SECONDS=${CMS_TIMEOUT_SECONDS:-20}
+      - MEDLINEPLUS_API_URL=${MEDLINEPLUS_API_URL:-https://wsearch.nlm.nih.gov/ws/query}
+      - MEDLINEPLUS_CONNECT_URL=${MEDLINEPLUS_CONNECT_URL:-https://connect.medlineplus.gov/service}
+      - MEDLINEPLUS_TIMEOUT_SECONDS=${MEDLINEPLUS_TIMEOUT_SECONDS:-15}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # Streamlit Interactive Web Application
+  # ----------------------------------------------------------------------------
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: open-healthcare-ui:latest
+    container_name: open-healthcare-ui
+    restart: unless-stopped
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      - API_BASE_URL=http://api:8000
+      - HEALTHCARE_AGENTS_API_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # Containerized Ollama Service (Optional Profile: container-ollama)
+  # ----------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: open-healthcare-ollama
+    profiles:
+      - container-ollama
+    restart: unless-stopped
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # Model Bootstrapper for Containerized Profile
+  # ----------------------------------------------------------------------------
+  ollama-bootstrap:
+    image: curlimages/curl:latest
+    container_name: open-healthcare-ollama-bootstrap
+    profiles:
+      - container-ollama
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_started
+    volumes:
+      - ./scripts/bootstrap_model.sh:/bootstrap_model.sh:ro
+    entrypoint: ["/bin/sh", "/bootstrap_model.sh"]
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-${MODEL_NAME:-gemma4:e2b}}
+      - OLLAMA_BASE_URL=http://ollama:11434
+    networks:
+      - healthcare-net
+
+networks:
+  healthcare-net:
+    driver: bridge
+    name: open-healthcare-network
+
+volumes:
+  ollama-models:
+    name: open-healthcare-ollama-models

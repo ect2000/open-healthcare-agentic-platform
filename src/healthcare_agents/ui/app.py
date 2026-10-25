@@ -25,7 +25,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-API_BASE_URL = os.environ.get("HEALTHCARE_AGENTS_API_URL", "http://127.0.0.1:8000")
+API_BASE_URL = os.environ.get("API_BASE_URL") or os.environ.get(
+    "HEALTHCARE_AGENTS_API_URL", "http://127.0.0.1:8000"
+)
 api_client = HealthcareApiClient(base_url=API_BASE_URL, timeout=90.0)
 
 
