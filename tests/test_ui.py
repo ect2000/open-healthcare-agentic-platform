@@ -408,3 +408,25 @@ def test_streamlit_preset_buttons_populate_query_without_autosubmit() -> None:
 
         # Crucial requirement: clicking preset must NOT trigger search execution automatically
         mock_s.assert_not_called()
+
+
+def test_render_developer_observability_hub() -> None:
+    """Verify that render_developer_observability_hub renders links and handles probes."""
+    from healthcare_agents.ui.components import render_developer_observability_hub
+
+    with patch("urllib.request.urlopen") as mock_url:
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_url.return_value.__enter__.return_value = mock_resp
+
+        # Should execute cleanly without throwing
+        render_developer_observability_hub("http://localhost:8000")
+
+
+def test_render_developer_observability_hub_offline_service() -> None:
+    """Verify that render_developer_observability_hub handles failed probes gracefully."""
+    from healthcare_agents.ui.components import render_developer_observability_hub
+
+    with patch("urllib.request.urlopen", side_effect=Exception("Connection refused")):
+        # Should gracefully record Offline without raising an exception
+        render_developer_observability_hub("http://localhost:8000")

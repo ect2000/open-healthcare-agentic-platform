@@ -28,6 +28,103 @@ def render_header() -> None:
     )
 
 
+def render_developer_observability_hub(api_base_url: str = "http://127.0.0.1:8000") -> None:
+    """Render a compact expandable 'Developer & Observability' hub in the sidebar."""
+    import os
+    import urllib.request
+
+    with st.expander("🛠️ Developer & Observability", expanded=False):
+        st.caption("Inspect live platform telemetry, metrics engines, and distributed traces.")
+
+        # Quick Links
+        st.markdown(
+            """
+            <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; font-size: 0.86rem;">
+                <a href="http://localhost:8000/docs" target="_blank" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+                    📄 <strong>FastAPI Docs</strong> <span style="font-size: 0.75rem; color: #94a3b8;">(:8000/docs)</span> ↗
+                </a>
+                <a href="http://localhost:3000" target="_blank" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+                    📊 <strong>Grafana</strong> <span style="font-size: 0.75rem; color: #94a3b8;">(:3000)</span> ↗
+                </a>
+                <a href="http://localhost:3000/d/healthcare-observability" target="_blank" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+                    📈 <strong>Grafana Dashboard</strong> <span style="font-size: 0.75rem; color: #94a3b8;">(M8 Hub)</span> ↗
+                </a>
+                <a href="http://localhost:9090" target="_blank" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+                    ⏱️ <strong>Prometheus</strong> <span style="font-size: 0.75rem; color: #94a3b8;">(:9090)</span> ↗
+                </a>
+                <a href="http://localhost:3000/explore?schemaVersion=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22tempo%22%7D%7D" target="_blank" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+                    🔭 <strong>Tempo Explorer</strong> <span style="font-size: 0.75rem; color: #94a3b8;">(:3200)</span> ↗
+                </a>
+                <a href="https://github.com/hastimal/open-healthcare-agentic-platform" target="_blank" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+                    🐙 <strong>GitHub Repository</strong> ↗
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            "<div style='border-top: 1px solid #334155; margin: 0.4rem 0 0.6rem 0;'></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<div style='font-size: 0.8rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.35rem;'>SERVICE HEALTH CHECKS</div>",
+            unsafe_allow_html=True,
+        )
+
+        # Service Health Checks (Internal/Container aware)
+        is_container = os.path.exists("/.dockerenv")
+        api_check_url = f"{api_base_url.rstrip('/')}/health"
+        grafana_check_url = (
+            "http://grafana:3000/api/health" if is_container else "http://localhost:3000/api/health"
+        )
+        prom_check_url = (
+            "http://prometheus:9090/-/healthy"
+            if is_container
+            else "http://localhost:9090/-/healthy"
+        )
+        tempo_check_url = (
+            "http://tempo:3200/ready" if is_container else "http://localhost:3200/ready"
+        )
+        ollama_check_url = (
+            "http://host.docker.internal:11434/api/tags"
+            if is_container
+            else "http://localhost:11434/api/tags"
+        )
+
+        services_to_check = [
+            ("FastAPI", api_check_url, "8000"),
+            ("Grafana", grafana_check_url, "3000"),
+            ("Prometheus", prom_check_url, "9090"),
+            ("Tempo", tempo_check_url, "3200"),
+            ("Ollama", ollama_check_url, "11434"),
+        ]
+
+        def _probe_service(url: str) -> bool:
+            try:
+                req = urllib.request.Request(url, method="GET")
+                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                    return resp.status in (200, 204)
+            except Exception:
+                return False
+
+        rows = []
+        for name, url, port in services_to_check:
+            is_ok = _probe_service(url)
+            status_text = "Healthy" if is_ok else "Offline"
+            status_color = "#4ade80" if is_ok else "#f87171"
+            icon = "🟢" if is_ok else "🔴"
+            rows.append(
+                f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;font-size:0.82rem;">'
+                f'<span style="color:#94a3b8;">{icon} {name} (:{port})</span>'
+                f'<span style="color:{status_color};font-weight:600;">{status_text}</span>'
+                f"</div>"
+            )
+
+        health_html = f'<div style="background-color:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:0.5rem 0.65rem;">{"".join(rows)}</div>'
+        st.markdown(health_html, unsafe_allow_html=True)
+
+
 def render_disclaimer_banner(is_synthetic: bool = False, retrieval_mode: str | None = None) -> None:
     """Render the clinical and administrative disclaimer banner."""
     is_demo = is_synthetic or (retrieval_mode == "fixtures")
@@ -273,6 +370,38 @@ def render_execution_observability(resp: SearchResponse) -> None:
         wall_clock_total_ms = max(0.0, (end_dt - start_dt).total_seconds() * 1000.0)
     except Exception:
         wall_clock_total_ms = sum(e.duration_ms for e in events)
+
+    # Trace Correlation Box
+    if resp.trace_id:
+        tempo_url = f"http://localhost:3000/explore?schemaVersion=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22queryType%22%3A%22traceId%22%2C%22query%22%3A%22{resp.trace_id}%22%7D%5D%7D%7D"
+        st.markdown(
+            f"""
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.9rem; margin-bottom: 1.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <span style="font-weight: 600; color: #1e293b;">🌐 Distributed Trace ID:</span>
+                        <code style="background: #e2e8f0; color: #0f172a; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; margin-left: 0.4rem;">{resp.trace_id}</code>
+                        {f'<span style="color: #64748b; font-size: 0.85rem; margin-left: 0.5rem;">(Span: <code>{resp.span_id}</code>)</span>' if resp.span_id else ""}
+                    </div>
+                    <div>
+                        <a href="{tempo_url}" target="_blank" style="text-decoration: none; background-color: #0284c7; color: white; padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
+                            🔭 View This Trace in Tempo ↗
+                        </a>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.8rem; margin-bottom: 1.2rem; color: #991b1b; font-size: 0.88rem;">
+                ⚠️ <strong>No Distributed Trace Recorded:</strong> Trace ID was not emitted for this workflow execution.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # Top-level summary metrics
     col_total, col_stages, col_model, col_retrieval = st.columns(4)

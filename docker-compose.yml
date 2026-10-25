@@ -41,6 +41,10 @@ services:
       - MEDLINEPLUS_API_URL=${MEDLINEPLUS_API_URL:-https://wsearch.nlm.nih.gov/ws/query}
       - MEDLINEPLUS_CONNECT_URL=${MEDLINEPLUS_CONNECT_URL:-https://connect.medlineplus.gov/service}
       - MEDLINEPLUS_TIMEOUT_SECONDS=${MEDLINEPLUS_TIMEOUT_SECONDS:-15}
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=open-healthcare-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=development
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -67,6 +71,9 @@ services:
     environment:
       - API_BASE_URL=http://api:8000
       - HEALTHCARE_AGENTS_API_URL=http://api:8000
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=open-healthcare-ui
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     depends_on:
       api:
         condition: service_healthy
@@ -76,6 +83,84 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # OpenTelemetry Collector (OTLP Ingestion & Routing)
+  # ----------------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: open-healthcare-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317" # OTLP gRPC
+      - "127.0.0.1:4318:4318" # OTLP HTTP
+      - "127.0.0.1:8889:8889" # Prometheus scrape exporter
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # Prometheus Time-Series Metrics Engine
+  # ----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: open-healthcare-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # Grafana Tempo Distributed Tracing Backend
+  # ----------------------------------------------------------------------------
+  tempo:
+    image: grafana/tempo:2.4.0
+    container_name: open-healthcare-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      - "127.0.0.1:3200:3200" # Tempo HTTP
+    networks:
+      - healthcare-net
+
+  # ----------------------------------------------------------------------------
+  # Grafana Observability Dashboards & Explore UI
+  # ----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: open-healthcare-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Editor
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+      - tempo
     networks:
       - healthcare-net
 
@@ -132,3 +217,9 @@ networks:
 volumes:
   ollama-models:
     name: open-healthcare-ollama-models
+  prometheus-data:
+    name: open-healthcare-prometheus-data
+  tempo-data:
+    name: open-healthcare-tempo-data
+  grafana-data:
+    name: open-healthcare-grafana-data

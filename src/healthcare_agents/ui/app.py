@@ -11,6 +11,7 @@ from healthcare_agents.ui.api_client import HealthcareApiClient
 from healthcare_agents.ui.components import (
     render_agent_workflow_and_fanout,
     render_cms_data_section,
+    render_developer_observability_hub,
     render_disclaimer_banner,
     render_execution_observability,
     render_header,
@@ -149,6 +150,9 @@ def main() -> None:
             help="Choose between live federal healthcare APIs or deterministic fixtures.",
         )
         selected_mode = None if mode_override.startswith("Default") else mode_override
+
+        # Developer & Observability Hub
+        render_developer_observability_hub(api_base_url=API_BASE_URL)
 
         st.markdown("---")
         st.caption(

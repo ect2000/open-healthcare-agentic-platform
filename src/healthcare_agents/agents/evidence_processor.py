@@ -96,6 +96,38 @@ def process_evidence_node(state: HealthcareWorkflowState) -> dict[str, Any]:
 
     all_unified: list[UnifiedEvidenceItem] = ranked_prov + ranked_pm + ranked_cms + ranked_mlp
 
+    from healthcare_agents.observability import safe_record_evidence_counts
+
+    # Record evidence quality metrics for each source
+    safe_record_evidence_counts(
+        source="nppes",
+        retrieved=len(norm_providers),
+        retained=len(ranked_prov),
+        excluded=len(excl_prov),
+        deduplicated=len(norm_providers) - len(dedup_providers),
+    )
+    safe_record_evidence_counts(
+        source="pubmed",
+        retrieved=len(norm_pubmed),
+        retained=len(ranked_pm),
+        excluded=len(excl_pm),
+        deduplicated=len(norm_pubmed) - len(dedup_pubmed),
+    )
+    safe_record_evidence_counts(
+        source="medlineplus",
+        retrieved=len(norm_medlineplus),
+        retained=len(ranked_mlp),
+        excluded=len(excl_mlp),
+        deduplicated=len(norm_medlineplus) - len(dedup_medlineplus),
+    )
+    safe_record_evidence_counts(
+        source="cms",
+        retrieved=len(norm_cms),
+        retained=len(ranked_cms),
+        excluded=len(excl_cms),
+        deduplicated=len(norm_cms) - len(dedup_cms),
+    )
+
     # 5. Build provenance records
     prov_registry = build_provenance_registry(all_unified)
     provenance_records = list(prov_registry.values())
