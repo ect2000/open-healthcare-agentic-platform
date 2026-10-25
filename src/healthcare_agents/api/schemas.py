@@ -132,3 +132,5 @@ class SearchResponse(BaseModel):
     created_at: str
     fanout_plan: dict[str, Any] = Field(default_factory=dict)
     execution_events: list[ExecutionEvent] = Field(default_factory=list)
+    trace_id: str | None = Field(default=None, description="OpenTelemetry 32-hex trace ID")
+    span_id: str | None = Field(default=None, description="OpenTelemetry 16-hex root span ID")

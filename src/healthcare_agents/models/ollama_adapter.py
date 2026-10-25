@@ -145,56 +145,125 @@ class OllamaAdapter(BaseModelAdapter):
             method="POST",
         )
 
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
-                resp_text = resp.read().decode("utf-8")
-                raw = json.loads(resp_text)
-        except urllib.error.HTTPError as err:
-            err_body = err.read().decode("utf-8", errors="replace")
-            if err.code == 404:
-                raise ModelNotFoundError(
-                    f"Model '{self.model_name}' not found on Ollama at {self.base_url}. "
-                    f"Run `ollama pull {self.model_name}` first."
+        import time
+
+        from healthcare_agents.observability import get_metrics, trace_span
+
+        m = get_metrics()
+        m.inference_requests_total.add(1, {"model": self.model_name})
+        t0 = time.perf_counter()
+
+        with trace_span(
+            "model.inference",
+            attributes={
+                "model.name": self.model_name,
+                "model.provider": "ollama",
+                "model.timeout_seconds": self.timeout_seconds,
+            },
+        ) as span:
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
+                    resp_text = resp.read().decode("utf-8")
+                    raw = json.loads(resp_text)
+                duration_s = time.perf_counter() - t0
+                m.inference_duration_seconds.record(
+                    duration_s, {"model": self.model_name, "status": "success"}
+                )
+            except urllib.error.HTTPError as err:
+                duration_s = time.perf_counter() - t0
+                m.inference_duration_seconds.record(
+                    duration_s, {"model": self.model_name, "status": "error"}
+                )
+                m.inference_errors_total.add(
+                    1, {"model": self.model_name, "error_type": "HTTPError"}
+                )
+                err_body = err.read().decode("utf-8", errors="replace")
+                if err.code == 404:
+                    raise ModelNotFoundError(
+                        f"Model '{self.model_name}' not found on Ollama at {self.base_url}. "
+                        f"Run `ollama pull {self.model_name}` first."
+                    ) from err
+                raise ModelInferenceError(
+                    f"Ollama returned HTTP error {err.code}: {err_body}"
                 ) from err
-            raise ModelInferenceError(f"Ollama returned HTTP error {err.code}: {err_body}") from err
-        except urllib.error.URLError as err:
-            if isinstance(err.reason, socket.timeout | TimeoutError):
+            except urllib.error.URLError as err:
+                duration_s = time.perf_counter() - t0
+                m.inference_duration_seconds.record(
+                    duration_s, {"model": self.model_name, "status": "error"}
+                )
+                m.inference_errors_total.add(
+                    1, {"model": self.model_name, "error_type": "URLError"}
+                )
+                if isinstance(err.reason, socket.timeout | TimeoutError):
+                    raise ModelTimeoutError(
+                        f"Request to Ollama timed out after {self.timeout_seconds} seconds."
+                    ) from err
+                raise ModelUnavailableError(
+                    f"Cannot connect to Ollama service at {self.base_url}: {err.reason}"
+                ) from err
+            except TimeoutError as err:
+                duration_s = time.perf_counter() - t0
+                m.inference_duration_seconds.record(
+                    duration_s, {"model": self.model_name, "status": "error"}
+                )
+                m.inference_errors_total.add(
+                    1, {"model": self.model_name, "error_type": "TimeoutError"}
+                )
                 raise ModelTimeoutError(
                     f"Request to Ollama timed out after {self.timeout_seconds} seconds."
                 ) from err
-            raise ModelUnavailableError(
-                f"Cannot connect to Ollama service at {self.base_url}: {err.reason}"
-            ) from err
-        except TimeoutError as err:
-            raise ModelTimeoutError(
-                f"Request to Ollama timed out after {self.timeout_seconds} seconds."
-            ) from err
-        except json.JSONDecodeError as err:
-            raise ModelInferenceError(f"Malformed JSON response from Ollama: {err}") from err
+            except json.JSONDecodeError as err:
+                duration_s = time.perf_counter() - t0
+                m.inference_duration_seconds.record(
+                    duration_s, {"model": self.model_name, "status": "error"}
+                )
+                m.inference_errors_total.add(
+                    1, {"model": self.model_name, "error_type": "JSONDecodeError"}
+                )
+                raise ModelInferenceError(f"Malformed JSON response from Ollama: {err}") from err
 
-        message_data = raw.get("message", {})
-        content = message_data.get("content", "")
+            message_data = raw.get("message", {})
+            content = message_data.get("content", "")
 
-        total_dur_ns = raw.get("total_duration")
-        eval_dur_ns = raw.get("eval_duration")
-        usage = CompletionUsage(
-            prompt_tokens=raw.get("prompt_eval_count"),
-            completion_tokens=raw.get("eval_count"),
-            total_tokens=(
-                (raw.get("prompt_eval_count") or 0) + (raw.get("eval_count") or 0)
-                if raw.get("prompt_eval_count") is not None or raw.get("eval_count") is not None
-                else None
-            ),
-            total_duration_ms=total_dur_ns / 1_000_000.0 if total_dur_ns is not None else None,
-            eval_duration_ms=eval_dur_ns / 1_000_000.0 if eval_dur_ns is not None else None,
-        )
+            total_dur_ns = raw.get("total_duration")
+            eval_dur_ns = raw.get("eval_duration")
+            prompt_tokens = raw.get("prompt_eval_count")
+            completion_tokens = raw.get("eval_count")
 
-        return ModelResponse(
-            content=content,
-            model=raw.get("model", self.model_name),
-            usage=usage,
-            raw=raw,
-        )
+            # Record actual token metrics reported by the response without fabricating
+            if prompt_tokens is not None:
+                try:
+                    m.inference_prompt_tokens_total.add(prompt_tokens, {"model": self.model_name})
+                    span.set_attribute("gen_ai.usage.input_tokens", prompt_tokens)
+                except Exception:
+                    pass
+            if completion_tokens is not None:
+                try:
+                    m.inference_completion_tokens_total.add(
+                        completion_tokens, {"model": self.model_name}
+                    )
+                    span.set_attribute("gen_ai.usage.output_tokens", completion_tokens)
+                except Exception:
+                    pass
+
+            usage = CompletionUsage(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=(
+                    (prompt_tokens or 0) + (completion_tokens or 0)
+                    if prompt_tokens is not None or completion_tokens is not None
+                    else None
+                ),
+                total_duration_ms=total_dur_ns / 1_000_000.0 if total_dur_ns is not None else None,
+                eval_duration_ms=eval_dur_ns / 1_000_000.0 if eval_dur_ns is not None else None,
+            )
+
+            return ModelResponse(
+                content=content,
+                model=raw.get("model", self.model_name),
+                usage=usage,
+                raw=raw,
+            )
 
     def generate_stream(
         self,

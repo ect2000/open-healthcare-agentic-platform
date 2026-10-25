@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import UTC, datetime
 from typing import cast
 
@@ -154,6 +155,58 @@ class HealthcareSearchService:
             "Executing search request %s [mode=%s]: %s", req_id, effective_mode, request.query
         )
 
+        from healthcare_agents.observability import (
+            get_current_span_id,
+            get_current_trace_id,
+            get_metrics,
+            trace_span,
+        )
+
+        t_search_start = time.perf_counter()
+        m = get_metrics()
+        m.search_requests_total.add(1, {"mode": effective_mode})
+
+        with trace_span(
+            "healthcare.search",
+            attributes={
+                "request_id": req_id,
+                "retrieval_mode": effective_mode,
+                "result_limit": request.result_limit or 10,
+            },
+        ):
+            current_trace_id = get_current_trace_id()
+            current_span_id = get_current_span_id()
+            try:
+                response = self._run_search_workflow(
+                    request=request,
+                    req_id=req_id,
+                    effective_mode=effective_mode,
+                    trace_id=current_trace_id,
+                    span_id=current_span_id,
+                )
+                duration_s = time.perf_counter() - t_search_start
+                m.search_duration_seconds.record(
+                    duration_s, {"mode": effective_mode, "status": "success"}
+                )
+                return response
+            except Exception as exc:
+                duration_s = time.perf_counter() - t_search_start
+                m.search_duration_seconds.record(
+                    duration_s, {"mode": effective_mode, "status": "error"}
+                )
+                m.search_errors_total.add(
+                    1, {"mode": effective_mode, "error_type": type(exc).__name__}
+                )
+                raise
+
+    def _run_search_workflow(
+        self,
+        request: SearchRequest,
+        req_id: str,
+        effective_mode: str,
+        trace_id: str | None,
+        span_id: str | None,
+    ) -> SearchResponse:
         model_adapter = OllamaAdapter(
             base_url=self.settings.ollama_base_url,
             model_name=self.settings.model_name,
@@ -347,4 +400,6 @@ class HealthcareSearchService:
             created_at=created_at,
             fanout_plan=final_state.get("fanout_plan", {}),
             execution_events=events,
+            trace_id=trace_id,
+            span_id=span_id,
         )

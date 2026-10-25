@@ -106,7 +106,7 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Structured MedlinePlus consumer health education formatting (`html_to_clean_markdown`) preserving clinical sections, questions, headings, paragraphs, and bullet lists.
   - Runtime multi-agent execution telemetry (`ExecutionEvent` schema) tracking monotonic durations, start/end timestamps, result counts, and inspectable outgoing queries dispatched to NPPES, PubMed, CMS, and MedlinePlus.
   - Interactive Streamlit `"🧠 Agent Execution & Observability"` timeline with execution metrics breakdown and inspectable stage expanders.
-- [x] **Milestone M7 — Intelligent Query Fan-Out, Parallel Retrieval & Workflow Graph** *(Current Feature Branch)*:
+- [x] **Milestone M7 — Intelligent Query Fan-Out, Parallel Retrieval & Workflow Graph**:
   - Fixed M6.1 count semantics and dynamic live/fixture mode labeling in agent answer synthesis and UI banners.
   - Intelligent query fan-out planning (`PlannedQuery` and `FanOutPlan`) converting patient questions into targeted multi-source queries across NPPES, PubMed, MedlinePlus, and CMS with deterministic fallback.
   - Concurrent multi-source retrieval engine using bounded worker pools (`ThreadPoolExecutor(max_workers=4)`) with strict dependent ordering for CMS quality lookups.
@@ -114,14 +114,54 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Interactive Streamlit `"⚡ Agent Workflow & Query Fan-Out"` tab featuring an executed Mermaid pipeline diagram, planned vs. dispatched queries table, and concurrency breakdown.
   - Controlled benchmarking measuring a **42.75% retrieval latency reduction** (target $\ge 25\%$).
   - OpenTelemetry readiness: `query_id` and `dependency_ids` correlated on execution events.
-- [ ] **Milestone M8 — OpenTelemetry, Prometheus, Grafana & Distributed Tracing**:
-  - Full OpenTelemetry collector deployment, Prometheus metrics exporter, Tempo/Jaeger tracing, and Grafana monitoring dashboards.
+- [x] **Milestone M8 — OpenTelemetry, Prometheus, Tempo & Grafana Observability** *(Current Feature Branch)*:
+  - Centralized `healthcare_agents.observability` subsystem with standard OpenTelemetry SDK, TracerProvider, MeterProvider, and OTLP Protobuf over HTTP exporters.
+  - Full W3C distributed trace propagation across Streamlit UI, FastAPI service, LangGraph agent execution stages, concurrent parallel retrievers, and native host Ollama / Gemma 4 inference.
+  - High-resolution application metrics tracking search requests, stage latencies, source-specific retrieval failures/timeouts/fallbacks, evidence quality counts (retrieved, retained, deduplicated, excluded), and real token metrics.
+  - Provisioned Docker Compose observability stack featuring OpenTelemetry Collector, Prometheus, Grafana Tempo, and Grafana with automated provisioning.
+  - Pre-built 6-section Grafana monitoring dashboard: **"Open Healthcare Agentic AI — Observability"** (`uid: healthcare-observability`).
+  - Interactive Streamlit distributed trace correlation with deep-linking directly into Grafana Tempo trace exploration.
+  - One-command demonstration launcher (`python scripts/run_m8_demo.py`) with complete container and host service health verification.
 
 ---
 
-## 5. Workflow Architecture & User Interface
+## 5. Workflow Architecture & Observability
 
-### Milestone M7 — Intelligent Query Fan-Out & Parallel Workflow (Current)
+### Milestone M8 — Production-Grade Observability (Current)
+
+Milestone M8 delivers end-to-end distributed tracing, application metrics, and real-time observability across the multi-agent discovery pipeline:
+
+#### 1. Platform Overview & Latency Telemetry
+![M8 Platform Overview](docs/images/m08_platform_overview.png)
+*Figure: Grafana Section 1 showing real-time platform request volume, P50/P95/P99 latency measurements, and HTTP status distributions.*
+
+#### 2. LangGraph Agent Workflow Execution
+![M8 Agent Workflow](docs/images/m08_agent_workflow.png)
+*Figure: Grafana Section 2 breaking down execution latency across Planner, Query Fan-Out, Parallel Retrieval, Evidence Processing, and Answer Synthesis.*
+
+#### 3. Parallel Multi-Source Retrieval Metrics
+![M8 Retrieval Performance](docs/images/m08_retrieval_metrics.png)
+*Figure: Grafana Section 3 monitoring request volume, latencies, failure rates, and zero-hit MedlinePlus consumer fallback activations across NPPES, PubMed, MedlinePlus, and CMS.*
+
+#### 4. Evidence Processing & Filtering Quality
+![M8 Evidence Quality](docs/images/m08_evidence_quality.png)
+*Figure: Grafana Section 4 tracking evidence counts through retrieved, retained, excluded, and deduplicated pipeline stages.*
+
+#### 5. Local Gemma 4 / Ollama Inference Metrics
+![M8 Gemma 4 Inference](docs/images/m08_gemma4_inference.png)
+*Figure: Grafana Section 5 reporting real model inference latencies and actual prompt/completion token counts directly from native Ollama responses.*
+
+#### 6. Grafana Tempo Distributed Trace Tree
+![M8 Tempo Trace](docs/images/m08_tempo_trace.png)
+*Figure: Full distributed trace showing the root search span, concurrent retriever child spans, and LLM inference under W3C TraceContext propagation.*
+
+#### 7. Streamlit Trace Correlation & Deep Link
+![M8 Streamlit Trace](docs/images/m08_streamlit_trace.png)
+*Figure: Streamlit interface presenting verifiable Hex Trace IDs and deep links directly into the Grafana Tempo trace view.*
+
+---
+
+### Milestone M7 — Intelligent Query Fan-Out & Parallel Workflow
 
 Milestone M7 introduces structured multi-source query fan-out, concurrent parallel retrieval, and an interactive agent workflow visualization graph:
 

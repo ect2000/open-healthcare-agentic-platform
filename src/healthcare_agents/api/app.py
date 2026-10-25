@@ -28,6 +28,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     yield
     logger.info("Shutting down Healthcare Agents API.")
+    from healthcare_agents.observability import shutdown_metrics, shutdown_tracing
+
+    shutdown_tracing()
+    shutdown_metrics()
 
 
 def create_app() -> FastAPI:
@@ -55,6 +59,9 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router)
+    from healthcare_agents.observability import instrument_fastapi
+
+    instrument_fastapi(app)
 
     return app
 

@@ -78,10 +78,19 @@ class HealthcareApiClient:
             result_limit=result_limit,
         )
 
+        headers: dict[str, str] = {}
+        try:
+            from healthcare_agents.observability import inject_w3c_trace_headers
+
+            headers = inject_w3c_trace_headers()
+        except Exception:
+            pass
+
         with httpx.Client(timeout=self.timeout) as client:
             resp = client.post(
                 f"{self.base_url}/api/v1/search",
                 json=req_payload.model_dump(exclude_none=True),
+                headers=headers,
             )
             resp.raise_for_status()
             return SearchResponse.model_validate(resp.json())

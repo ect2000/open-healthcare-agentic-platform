@@ -274,6 +274,29 @@ def render_execution_observability(resp: SearchResponse) -> None:
     except Exception:
         wall_clock_total_ms = sum(e.duration_ms for e in events)
 
+    # Trace Correlation Box
+    if resp.trace_id:
+        tempo_url = f"http://localhost:3000/explore?schemaVersion=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22queryType%22%3A%22traceId%22%2C%22query%22%3A%22{resp.trace_id}%22%7D%5D%7D%7D"
+        st.markdown(
+            f"""
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.9rem; margin-bottom: 1.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <span style="font-weight: 600; color: #1e293b;">🌐 Distributed Trace ID:</span>
+                        <code style="background: #e2e8f0; color: #0f172a; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; margin-left: 0.4rem;">{resp.trace_id}</code>
+                        {f'<span style="color: #64748b; font-size: 0.85rem; margin-left: 0.5rem;">(Span: <code>{resp.span_id}</code>)</span>' if resp.span_id else ""}
+                    </div>
+                    <div>
+                        <a href="{tempo_url}" target="_blank" style="text-decoration: none; background-color: #0284c7; color: white; padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500;">
+                            🔭 Inspect Trace in Grafana Tempo ↗
+                        </a>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     # Top-level summary metrics
     col_total, col_stages, col_model, col_retrieval = st.columns(4)
     with col_total:
