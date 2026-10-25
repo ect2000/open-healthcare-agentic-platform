@@ -11,6 +11,7 @@ from healthcare_agents.ui.api_client import HealthcareApiClient
 from healthcare_agents.ui.components import (
     render_cms_data_section,
     render_disclaimer_banner,
+    render_execution_observability,
     render_header,
     render_medlineplus_card,
     render_provenance_and_citations,
@@ -153,12 +154,13 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
 
-        tab_providers, tab_research, tab_education, tab_cms = st.tabs(
+        tab_providers, tab_research, tab_education, tab_cms, tab_observability = st.tabs(
             [
                 f"🩺 Providers ({len(resp.provider_candidates)})",
                 f"🔬 Research ({len(resp.clinical_research)})",
                 f"📖 Patient Education ({len(resp.patient_education)})",
                 f"🏛️ CMS Quality ({len(resp.cms_quality_data)})",
+                f"🧠 Agent Execution & Observability ({len(resp.execution_events)})",
             ]
         )
 
@@ -194,6 +196,9 @@ def main() -> None:
 
         with tab_cms:
             render_cms_data_section(resp.cms_quality_data, resp.missing_information)
+
+        with tab_observability:
+            render_execution_observability(resp)
 
         render_provenance_and_citations(resp)
 

@@ -18,6 +18,7 @@ This directory maintains the historical documentation, execution records, implem
 | [M04E-unified-evidence](./M04E-unified-evidence/) | `v0.4.4-m04e` | Unified Evidence Normalization, Ranking, Deduplication & Provenance | Complete |
 | [M05-fastapi-streamlit](./M05-fastapi-streamlit/) | `v0.5.0-m05` | FastAPI REST Service & Streamlit Interactive Web Application | Complete |
 | [M06-docker-compose](./M06-docker-compose/) | `v0.6.0-m06` | Docker Compose Multi-Profile Containerization | Complete |
+| [M06-1-ui-observability](./M06-1-ui-observability/) | `feature/m06-1-ui-observability` | UI Experience, Patient Education Formatting & Agent Execution Observability | Verified |
 | M07-kubernetes-helm | `v0.7.0-m07` | Kubernetes Deployments, Helm Charts & vLLM Cluster Serving | Planned |
 
 ---

@@ -58,3 +58,4 @@ class HealthcareWorkflowState(TypedDict, total=False):
     final_answer: str
     errors: list[str]
     execution_metadata: dict[str, Any]
+    execution_events: list[dict[str, Any]]

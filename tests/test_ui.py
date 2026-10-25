@@ -9,6 +9,7 @@ from streamlit.testing.v1 import AppTest
 
 from healthcare_agents.api.schemas import (
     EvidenceItemResponse,
+    ExecutionEvent,
     HealthResponse,
     ProvenanceResponse,
     ReadinessResponse,
@@ -18,6 +19,8 @@ from healthcare_agents.ui.api_client import HealthcareApiClient
 from healthcare_agents.ui.components import (
     render_cms_data_section,
     render_disclaimer_banner,
+    render_execution_observability,
+    render_header,
     render_medlineplus_card,
     render_provenance_and_citations,
     render_provider_card,
@@ -125,6 +128,30 @@ def sample_search_response() -> SearchResponse:
         execution_metadata={"provider_count": 1, "clinical_count": 1, "education_count": 1},
         limitations_disclaimer="Administrative disclaimer text",
         created_at="2026-10-25T10:00:00Z",
+        execution_events=[
+            ExecutionEvent(
+                request_id="req-test-12345",
+                stage="Planner Agent",
+                tool_name="Gemma 4 Planner",
+                status="completed",
+                start_time="2026-10-25T10:00:00Z",
+                end_time="2026-10-25T10:00:01Z",
+                duration_ms=1000.0,
+                query_summary="Find pediatric dentists",
+                result_count=1,
+            ),
+            ExecutionEvent(
+                request_id="req-test-12345",
+                stage="NPPES Retrieval",
+                tool_name="NPPESProviderRetriever",
+                status="completed",
+                start_time="2026-10-25T10:00:01Z",
+                end_time="2026-10-25T10:00:02Z",
+                duration_ms=1000.0,
+                query_summary="specialty='Pediatric Dentistry'",
+                result_count=1,
+            ),
+        ],
     )
 
 
@@ -247,6 +274,12 @@ def test_ui_components_render(sample_search_response: SearchResponse) -> None:
             ],
             [],
         )
+
+        # Render header
+        render_header()
+
+        # Render observability
+        render_execution_observability(sample_search_response)
 
         # Render provenance and citations
         render_provenance_and_citations(sample_search_response)

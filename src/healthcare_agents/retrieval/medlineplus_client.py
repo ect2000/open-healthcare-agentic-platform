@@ -65,6 +65,64 @@ def strip_html_tags(raw_text: str | None) -> str:
     return html.unescape(clean).strip()
 
 
+def html_to_clean_markdown(raw_html: str | None) -> str:
+    """Convert MedlinePlus HTML content into structured, safe Markdown.
+
+    Preserves section headings, paragraph breaks, bullet lists, clinical
+    terminology, and prevents collapsing of adjacent tags while removing
+    untrusted or extraneous markup without generating raw HTML.
+    """
+    if not raw_html:
+        return ""
+
+    text = html.unescape(raw_html)
+    # Remove inline highlight tags (e.g. <span class="qt0">...</span>, <b>, <em>)
+    text = re.sub(r"</?(?:span|font|b|i|strong|em)[^>]*>", "", text)
+
+    # Detect headings formatted as questions or sections
+    text = re.sub(
+        r"([A-Za-z0-9][A-Za-z0-9\s,\'\"\-]{2,80}\?)\s*(?=<p|<ul|<ol|<h|</p)",
+        r"\n\n### \1\n\n",
+        text,
+    )
+    text = re.sub(
+        r"([A-Za-z0-9][A-Za-z0-9\s,\'\"\-]{2,50}:)\s*(?=<p|<ul|<ol|<h|</p)",
+        r"\n\n### \1\n\n",
+        text,
+    )
+
+    # Convert explicit HTML heading tags
+    text = re.sub(r"<h[1-6][^>]*>(.*?)</h[1-6]>", r"\n\n### \1\n\n", text, flags=re.DOTALL)
+
+    # Convert list items to markdown bullets
+    text = re.sub(r"<li[^>]*>\s*", r"\n- ", text)
+    text = re.sub(r"</li>", "", text)
+    text = re.sub(r"</?(?:ul|ol)[^>]*>", r"\n", text)
+
+    # Convert paragraph and break tags to markdown linebreaks
+    text = re.sub(r"<p[^>]*>", r"\n\n", text)
+    text = re.sub(r"</p>", r"\n\n", text)
+    text = re.sub(r"<br\s*/?>", r"\n", text)
+
+    # Strip any remaining HTML tags safely
+    text = re.sub(r"<[^>]+>", "", text)
+
+    # Clean redundant blank lines and trailing spaces
+    lines = [line.strip() for line in text.split("\n")]
+    clean_lines: list[str] = []
+    prev_blank = False
+    for line in lines:
+        if not line or line == "###":
+            if not prev_blank:
+                clean_lines.append("")
+                prev_blank = True
+        else:
+            clean_lines.append(line)
+            prev_blank = False
+
+    return "\n".join(clean_lines).strip()
+
+
 class MedlinePlusPatientEducationRetriever(BasePatientEducationRetriever):
     """Official client for the NLM MedlinePlus Web Service."""
 
@@ -217,7 +275,7 @@ class MedlinePlusPatientEducationRetriever(BasePatientEducationRetriever):
             elif snippet_elem is not None and snippet_elem.text:
                 raw_summary = snippet_elem.text
 
-            clean_summary = strip_html_tags(raw_summary)
+            clean_summary = html_to_clean_markdown(raw_summary)
             if not clean_summary:
                 clean_summary = (
                     f"Authoritative patient education topic from MedlinePlus on {clean_title}."
@@ -316,7 +374,8 @@ class MedlinePlusPatientEducationRetriever(BasePatientEducationRetriever):
                 title=strip_html_tags(title_text) or f"Condition Code {clean_code}",
                 source="MedlinePlus-Connect",
                 summary=(
-                    strip_html_tags(summary_text) or f"Patient education for code {clean_code}."
+                    html_to_clean_markdown(summary_text)
+                    or f"Patient education for code {clean_code}."
                 ),
                 evidence_type="patient_education",
                 year=current_year,

@@ -101,6 +101,13 @@ The platform will integrate four authoritative, publicly available healthcare re
     - **Profile B (Containerized Ollama Profile)**: Runs complete containerized stack (`--profile container-ollama`) with persistent model volume (`open-healthcare-ollama-models`) and model bootstrap script (`scripts/bootstrap_model.sh`).
   - Internal Docker DNS networking (`healthcare-net`), container health checks, and restart recovery.
   - Browser verification via Playwright capturing real container screenshots (`docs/images/m6_container_ui.png`, `docs/images/m6_container_results.png`).
+- [x] **Milestone M6.1 — UI Experience & Agent Execution Visibility** *(Current)*:
+  - High-contrast, dual-theme application header with verified branding palette (`#EF4444`, `#38BDF8`, `#F8FAFC`, `#CBD5E1`).
+  - Structured MedlinePlus consumer health education formatting (`html_to_clean_markdown`) preserving clinical sections, questions, headings, paragraphs, and bullet lists.
+  - Compact topic cards with overview summaries and expandable `"Read More"` views.
+  - Runtime multi-agent execution telemetry (`ExecutionEvent` schema) tracking monotonic durations, start/end timestamps, result counts, and inspectable outgoing queries dispatched to NPPES, PubMed, CMS, and MedlinePlus.
+  - Interactive Streamlit `"🧠 Agent Execution & Observability"` timeline with execution metrics breakdown and inspectable stage expanders.
+  - Maintained $\ge 90\%$ test coverage ($90.45\%$), clean mypy type validation, and zero Ruff errors.
 - [ ] **Milestone M7 — Kubernetes, Helm, vLLM & OpenTelemetry**:
   - Production Kubernetes manifests, Helm charts, distributed tracing, and cluster-scale vLLM GPU serving.
 
@@ -108,7 +115,23 @@ The platform will integrate four authoritative, publicly available healthcare re
 
 ## 5. Workflow Architecture & User Interface
 
-### Milestone M6 — Docker Compose Container Architecture (Current)
+### Milestone M6.1 — UI Experience & Multi-Agent Observability Interface (Current)
+
+Milestone M6.1 brings high-contrast dual-theme branding, structured MedlinePlus patient health education formatting, and real-time LangGraph multi-agent execution telemetry:
+
+#### 1. High-Contrast Header Branding
+![M6.1 Header Branding](docs/images/m6_1_header_branding.png)
+*Figure: High-contrast header featuring verified branding colors (`#EF4444`, `#38BDF8`, `#F8FAFC`, `#CBD5E1`) in a deep slate container, optimized for dark and light Streamlit themes.*
+
+#### 2. Structured Patient Education Formatting
+![M6.1 Patient Education Formatting](docs/images/m6_1_patient_education_formatting.png)
+*Figure: Formatted MedlinePlus consumer health education cards preserving inquiry headings, section labels, paragraphs, and bullet lists, with expandable "Read More" full-content view.*
+
+#### 3. Real-Time Multi-Agent Execution Observability & Timeline
+![M6.1 Agent Execution Timeline](docs/images/m6_1_agent_execution_timeline.png)
+*Figure: Live LangGraph execution telemetry captured via monotonic clocks (`ExecutionEvent` schema), displaying stage durations, status badges, and inspectable queries dispatched to NPPES, PubMed, CMS, and MedlinePlus.*
+
+### Milestone M6 — Docker Compose Container Architecture
 
 The containerized platform architecture encapsulates the FastAPI service gateway, the Streamlit UI, and the multi-agent LangGraph core with dual-profile model execution:
 
