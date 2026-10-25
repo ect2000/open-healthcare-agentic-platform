@@ -99,6 +99,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Display detailed agent planning, retrieval, and validation stages.",
     )
 
+    # healthcare-agents serve command (Milestone M5 - FastAPI)
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Run the FastAPI backend server.",
+    )
+    serve_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind server to (default: 127.0.0.1).",
+    )
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind server to (default: 8000).",
+    )
+    serve_parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development.",
+    )
+
+    # healthcare-agents ui command (Milestone M5 - Streamlit)
+    ui_parser = subparsers.add_parser(
+        "ui",
+        help="Run the Streamlit web application.",
+    )
+    ui_parser.add_argument(
+        "--port",
+        type=int,
+        default=8501,
+        help="Port to bind Streamlit to (default: 8501).",
+    )
+
     return parser
 
 
@@ -399,6 +433,57 @@ def handle_search(query: str, verbose: bool = False) -> int:
     return 0
 
 
+def handle_serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> int:
+    """Launch the FastAPI backend server using uvicorn."""
+    try:
+        import uvicorn
+
+        from healthcare_agents.api.app import create_app
+
+        sys.stdout.write(f"Starting Healthcare Agents FastAPI server on http://{host}:{port}...\n")
+        app_instance = create_app()
+        uvicorn.run(app_instance, host=host, port=port)
+        return 0
+    except ImportError:
+        sys.stderr.write("FastAPI or uvicorn not installed. Please install dependencies.\n")
+        return 1
+    except Exception as exc:
+        sys.stderr.write(f"Failed to start server: {exc}\n")
+        return 1
+
+
+def handle_ui(port: int = 8501) -> int:
+    """Launch the Streamlit web application."""
+    import subprocess
+    from pathlib import Path
+
+    app_path = Path(__file__).parent / "ui" / "app.py"
+    if not app_path.exists():
+        sys.stderr.write(f"Streamlit application file not found at: {app_path}\n")
+        return 1
+
+    sys.stdout.write(f"Launching Healthcare Agents Streamlit UI on http://localhost:{port}...\n")
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(app_path),
+        "--server.port",
+        str(port),
+        "--server.headless",
+        "true",
+    ]
+    try:
+        return subprocess.call(cmd)
+    except KeyboardInterrupt:
+        sys.stdout.write("\nStreamlit application stopped.\n")
+        return 0
+    except Exception as exc:
+        sys.stderr.write(f"Failed to launch Streamlit UI: {exc}\n")
+        return 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
@@ -423,6 +508,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_search(
             query=args.query,
             verbose=getattr(args, "verbose", False),
+        )
+
+    if args.command == "serve":
+        return handle_serve(
+            host=getattr(args, "host", "127.0.0.1"),
+            port=getattr(args, "port", 8000),
+            reload=getattr(args, "reload", False),
+        )
+
+    if args.command == "ui":
+        return handle_ui(
+            port=getattr(args, "port", 8501),
         )
 
     parser.print_help()

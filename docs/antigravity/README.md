@@ -16,7 +16,7 @@ This directory maintains the historical documentation, execution records, implem
 | [M04C-cms](./M04C-cms/) | `v0.4.2-m04c` | CMS Provider Data Clinician & Facility Quality Metrics | Complete |
 | [M04D-medlineplus](./M04D-medlineplus/) | `v0.4.3-m04d` | Live NLM MedlinePlus Patient Education & Health Topics | Complete |
 | [M04E-unified-evidence](./M04E-unified-evidence/) | `v0.4.4-m04e` | Unified Evidence Normalization, Ranking, Deduplication & Provenance | Complete |
-| M05-ui-gateway | `v0.5.0-m05` | Streamlit User Interface & FastAPI Gateway | Planned |
+| [M05-fastapi-streamlit](./M05-fastapi-streamlit/) | `v0.5.0-m05` | FastAPI REST Service & Streamlit Interactive Web Application | Complete |
 | M06-k8s-observability | `v0.6.0-m06` | Docker, Kubernetes, Helm, vLLM & OpenTelemetry | Planned |
 
 ---

@@ -80,25 +80,46 @@ The platform will integrate four authoritative, publicly available healthcare re
   - Client-side throttling enforcing strict acceptable use threshold (<85 req/min) and thread-safe in-memory 12h TTL caching.
   - Optional MedlinePlus Connect adapter for standardized ICD-10-CM / RxCUI / SNOMED CT code-based education.
   - Comprehensive deterministic validation: official MedlinePlus domain verification, consumer education guardrails, and 4-way data source separation.
-- [x] **Milestone M4E — Unified Evidence Normalization, Ranking, Deduplication & Provenance** *(Current)*:
+- [x] **Milestone M4E — Unified Evidence Normalization, Ranking, Deduplication & Provenance**:
   - Unified evidence processing layer (`src/healthcare_agents/evidence/`) across all four live public healthcare sources.
   - Typed normalization preserving underlying source records (`original_provider`, `original_record`, `original_cms`).
   - Deterministic deduplication (exact 10-digit NPI, exact PMID/DOI, CMS reporting period isolation, canonical MedlinePlus URLs with English/Spanish distinction).
   - Explainable source-specific relevance and ranking (no fabricated universal clinician quality score).
   - Explicit topical regression guards (rejection of unrelated studies such as PMID 39046104 dementia GWAS for pediatric dental queries).
   - Traceable source provenance ledger verifying authorized domains (`nih.gov`, `cms.gov`, `hhs.gov`) and citation boundaries.
-- [ ] **Milestone M5 — Streamlit UI & FastAPI Gateway**:
-  - Interactive web interface for clinicians and patients, REST and streaming APIs.
+- [x] **Milestone M5 — FastAPI + Streamlit Web Application** *(Current)*:
+  - High-performance FastAPI REST backend (`healthcare_agents.api`) supporting `/health`, `/ready`, `/api/v1/status`, and `/api/v1/search`.
+  - Reusable execution service orchestrating LangGraph multi-agent discovery.
+  - Interactive, professional Streamlit web application (`healthcare_agents.ui`) with quick clinical presets, real-time readiness status, and 4 tabbed result views.
+  - Expandable provenance audit ledger with official verification badges and cryptographic digest verification.
+  - Streamlit automated browser testing and real screenshot capture via Playwright.
+  - New CLI commands: `healthcare-agents serve` and `healthcare-agents ui`.
 - [ ] **Milestone M6 — Docker, Kubernetes, vLLM & OpenTelemetry**:
   - Production containerization, Helm charts, distributed tracing, and GPU serving.
 
 ---
 
-## 5. Workflow Architecture
+## 5. Workflow Architecture & User Interface
 
-### Milestone M4E — Unified Evidence Processing & Multi-Source Discovery (Current)
+### Milestone M5 — Presentation Layer & Full System Architecture (Current)
 
-The LangGraph orchestration flow executes bounded, typed state transitions across specialized agents coordinating all four authoritative public healthcare data sources:
+The complete end-to-end platform architecture connects the Streamlit UI, FastAPI service gateway, and LangGraph multi-agent discovery core across all four live healthcare data sources:
+
+![M5 System Architecture](docs/images/m5_workflow.png)
+
+### Live Streamlit Web Interface
+
+The Streamlit web application provides a responsive, evidence-backed discovery interface for clinicians, researchers, and patients:
+
+![Streamlit Search Interface](docs/images/m5_streamlit_ui.png)
+
+*Figure: Initial Streamlit interface showing preset clinical discovery scenarios, system readiness badges, and safety disclaimers.*
+
+![Streamlit Grounded Discovery Results](docs/images/m5_streamlit_results.png)
+
+*Figure: Multi-agent discovery results with grounded narrative synthesis, validated NPPES provider credentials, PubMed research citations, MedlinePlus patient guidance, and the cryptographic provenance audit ledger.*
+
+### Milestone M4E — Unified Evidence Processing & Multi-Source Discovery
 
 ![M4E Unified Evidence Workflow](docs/images/m4e_workflow.png)
 
@@ -158,11 +179,17 @@ healthcare-agents health
 # Check local model connection (Ollama + Gemma 4)
 healthcare-agents model status
 
-# Execute LangGraph multi-agent discovery workflow
+# Execute LangGraph multi-agent discovery workflow via CLI
 healthcare-agents search --query "Find pediatric dentists in Houston"
 
 # Detailed stage-by-stage multi-agent progression
 healthcare-agents search --query "Find pediatric dentists in Houston" --verbose
+
+# Launch FastAPI REST Service (Port 8000)
+healthcare-agents serve --host 127.0.0.1 --port 8000
+
+# Launch Streamlit Web Application (Port 8501)
+healthcare-agents ui --port 8501
 ```
 
 ---
@@ -199,16 +226,16 @@ python -m build
 
 ## 9. Current Implemented Functionality vs. Future Status
 
-- **Currently Implemented (M1–M3)**:
-  - Packaging, configuration, environment validation, CLI commands (`health`, `model`, `search`).
+- **Currently Implemented (M1–M5)**:
+  - Packaging, configuration, environment validation, CLI commands (`health`, `model`, `search`, `serve`, `ui`).
   - Local Gemma 4 serving via Ollama adapter (`src/healthcare_agents/models/`).
   - LangGraph multi-agent orchestration workflow (`src/healthcare_agents/workflows/`).
-  - Five specialized agent components (Planner, Provider, Evidence, Validator, Answer).
-  - Deterministic Python verification and synthetic provider/evidence retrieval fixtures.
-  - Comprehensive offline and live integration test coverage (96%+).
-- **Future Milestones (M4–M6)**:
-  - Live MCP healthcare data connectors (NPPES, PubMed, CMS, MedlinePlus) in M4.
-  - Streamlit interactive UI and FastAPI gateway in M5.
+  - Four live public healthcare retrieval clients (NPPES, PubMed, CMS, MedlinePlus).
+  - Unified evidence normalization, deterministic deduplication, relevance scoring, and provenance tracking (`src/healthcare_agents/evidence/`).
+  - FastAPI service gateway with OpenAPI documentation and health probes (`src/healthcare_agents/api/`).
+  - Streamlit web application with presets, status tracking, and tabbed evidence cards (`src/healthcare_agents/ui/`).
+  - Comprehensive offline unit/integration test suite (90%+ coverage) and Playwright browser validation.
+- **Future Milestones (M6)**:
   - Production containerization (Docker, Kubernetes, vLLM, Helm) and OpenTelemetry in M6.
 
 For detailed architecture details, refer to [docs/architecture/README.md](docs/architecture/README.md).

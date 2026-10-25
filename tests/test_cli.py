@@ -14,7 +14,7 @@ def test_cli_version(capsys: pytest.CaptureFixture[str]) -> None:
         main(["--version"])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "healthcare-agents 0.4.4" in captured.out or "healthcare-agents 0.4.4" in captured.err
+    assert "healthcare-agents 0.5.0" in captured.out or "healthcare-agents 0.5.0" in captured.err
 
 
 def test_cli_health_subcommand(capsys: pytest.CaptureFixture[str]) -> None:
@@ -60,3 +60,19 @@ def test_cli_health_configuration_error(capsys: pytest.CaptureFixture[str]) -> N
         assert exit_code == 1
         captured = capsys.readouterr()
         assert "Configuration error: bad config" in captured.err
+
+
+def test_cli_serve_subcommand() -> None:
+    """Verify serve subcommand invokes uvicorn."""
+    with patch("uvicorn.run") as mock_uvicorn:
+        exit_code = main(["serve", "--host", "127.0.0.1", "--port", "8000"])
+        assert exit_code == 0
+        assert mock_uvicorn.called
+
+
+def test_cli_ui_subcommand() -> None:
+    """Verify ui subcommand invokes subprocess."""
+    with patch("subprocess.call", return_value=0) as mock_sub:
+        exit_code = main(["ui", "--port", "8501"])
+        assert exit_code == 0
+        assert mock_sub.called
