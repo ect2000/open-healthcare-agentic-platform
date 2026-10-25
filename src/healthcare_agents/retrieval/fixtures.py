@@ -67,6 +67,18 @@ SYNTHETIC_PROVIDERS: list[ProviderRecord] = [
         is_synthetic=True,
         metadata={"star_rating": "4.5"},
     ),
+    ProviderRecord(
+        provider_id="DEMO-PROV-005",
+        npi="9990005555",
+        name="Dr. Sarah Al-Mansoor, DDS",
+        specialty="General Practice Dentistry",
+        facility_name="Houston Downtown Dental Care",
+        city="Houston",
+        state="TX",
+        source="NPPES-Demo-Fixture",
+        is_synthetic=True,
+        metadata={"board_certified": "true", "languages": "English, Arabic"},
+    ),
 ]
 
 SYNTHETIC_EVIDENCE: list[ClinicalEvidenceRecord] = [
@@ -109,6 +121,35 @@ SYNTHETIC_EVIDENCE: list[ClinicalEvidenceRecord] = [
         year=2023,
         is_synthetic=True,
         citation_ref="PMID:DEMO-3612847",
+    ),
+    ClinicalEvidenceRecord(
+        record_id="EVID-MEDLINE-004",
+        title="Tooth Decay and Dental Cavities: Symptoms, Causes, and Treatments",
+        source="MedlinePlus-Demo-Fixture",
+        summary=(
+            "Tooth decay is damage that occurs when bacteria in the mouth produce acids "
+            "that attack tooth enamel. This can lead to a cavity. Routine dental visits, fluoride, "
+            "and timely restorative care prevent tooth loss. Severe tooth pain or facial swelling "
+            "requires urgent dental evaluation."
+        ),
+        evidence_type="patient_education",
+        year=2025,
+        is_synthetic=True,
+        citation_ref="MedlinePlus:DEMO-tooth-decay",
+    ),
+    ClinicalEvidenceRecord(
+        record_id="EVID-PUBMED-005",
+        title="Behavioral Interventions and Anxiety Management in Pediatric Dentistry",
+        source="PubMed-Demo-Fixture",
+        summary=(
+            "Behavioral guidance techniques, including tell-show-do, positive reinforcement, "
+            "and cognitive-behavioral strategies, significantly reduce dental fear "
+            "and anxiety in children."
+        ),
+        evidence_type="research_study",
+        year=2024,
+        is_synthetic=True,
+        citation_ref="PMID:DEMO-3849102",
     ),
 ]
 

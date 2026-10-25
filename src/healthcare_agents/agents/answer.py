@@ -13,7 +13,9 @@ candidates and clinical evidence records.
 
 CRITICAL RULES:
 1. ONLY refer to clinicians, facilities, and research findings that appear in the supplied data.
-2. Disclose that provider results are from demonstration test fixtures.
+2. If records are marked as DEMO FIXTURE, explicitly state that results are demonstration fixtures.
+   If records are marked as LIVE REGISTRY or federal data, present them as live federal registry
+   results.
 3. Include explicit citation references from the sources provided.
 4. Do not speculate or invent clinical recommendations outside the evidence.
 5. Provide a clear, respectful, and well-structured clinical summary.
@@ -101,12 +103,17 @@ def synthesize_answer(
     final_answer: str = ""
 
     if model_adapter is not None:
+        retrieval_mode = metadata.get("retrieval_mode", "live")
+        mode_instruction = (
+            "state that records are demonstration fixtures."
+            if retrieval_mode == "fixtures"
+            else "state that provider records reflect live federal public data."
+        )
         try:
             prompt = (
                 f"Based strictly on the following validated records, summarize findings:\n\n"
                 f"{context}\n\n"
-                f"Summarize available providers, cite clinical evidence, and state that "
-                f"records are demonstration fixtures."
+                f"Summarize available providers, cite clinical evidence, and {mode_instruction}"
             )
             response = model_adapter.generate(
                 prompt=prompt,

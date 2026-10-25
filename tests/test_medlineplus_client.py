@@ -12,6 +12,7 @@ from healthcare_agents.retrieval.medlineplus_client import (
     MedlinePlusConnectionError,
     MedlinePlusPatientEducationRetriever,
     MedlinePlusResponseError,
+    html_to_clean_markdown,
     strip_html_tags,
 )
 
@@ -82,6 +83,27 @@ def test_strip_html_tags() -> None:
     assert strip_html_tags("") == ""
     assert strip_html_tags('<span class="qt0">Dental</span> &amp; Care') == "Dental & Care"
     assert strip_html_tags("<p>Hello <b>World</b></p>") == "Hello World"
+
+
+def test_html_to_clean_markdown() -> None:
+    assert html_to_clean_markdown(None) == ""
+    assert html_to_clean_markdown("") == ""
+
+    sample = (
+        'What is <span class="qt0">anesthesia</span>?'
+        "<p>Anesthesia is the use of medicines to prevent pain.</p>"
+        "<p>Types of anesthesia include:</p>"
+        "<ul><li>Local anesthesia</li><li>Regional anesthesia</li></ul>"
+    )
+    cleaned = html_to_clean_markdown(sample)
+    assert "### What is anesthesia?" in cleaned
+    assert "Anesthesia is the use of medicines to prevent pain." in cleaned
+    assert "### Types of anesthesia include:" in cleaned
+    assert "- Local anesthesia" in cleaned
+    assert "- Regional anesthesia" in cleaned
+    assert "<span" not in cleaned
+    assert "<p>" not in cleaned
+    assert "<ul>" not in cleaned
 
 
 def test_medlineplus_search_topics_success() -> None:

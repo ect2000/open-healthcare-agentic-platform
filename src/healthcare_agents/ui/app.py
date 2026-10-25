@@ -9,8 +9,10 @@ import streamlit as st
 from healthcare_agents.api.schemas import SearchResponse
 from healthcare_agents.ui.api_client import HealthcareApiClient
 from healthcare_agents.ui.components import (
+    render_agent_workflow_and_fanout,
     render_cms_data_section,
     render_disclaimer_banner,
+    render_execution_observability,
     render_header,
     render_medlineplus_card,
     render_provenance_and_citations,
@@ -36,31 +38,109 @@ def main() -> None:
     render_header()
 
     with st.sidebar:
-        st.header("⚙️ Platform Control")
+        st.subheader("⚙️ Platform Control")
         api_health = api_client.check_health()
         api_ready = api_client.check_readiness()
 
-        if api_health and api_health.status == "healthy":
-            st.success(f"Backend API: Online (v{api_health.version})")
-        else:
-            st.error(f"Backend API: Offline at {API_BASE_URL}")
+        # Compact status panel
+        mode_val = api_ready.retrieval_mode if api_ready else "live"
+        mode_badge = "🧪 Fixtures" if mode_val == "fixtures" else "🟢 Live Federal"
+        ollama_status = (
+            "✅ Online" if (api_ready and api_ready.ollama_service_available) else "❌ Offline"
+        )
+        model_status = "✅ Available" if (api_ready and api_ready.model_installed) else "❌ Missing"
+        model_name = api_ready.model_name if api_ready else "gemma4:e2b"
+        api_online = bool(api_health and api_health.status == "healthy")
 
-        if api_ready:
-            st.info(
-                f"🧠 Model: `{api_ready.model_name}`\n\n"
-                f"📡 Retrieval Mode: `{api_ready.retrieval_mode}`\n\n"
-                f"Ollama Online: {'✅' if api_ready.ollama_service_available else '❌'}\n\n"
-                f"Model Available: {'✅' if api_ready.model_installed else '❌'}"
-            )
-        else:
-            st.warning("Backend readiness probe uncontactable.")
+        st.markdown(
+            f"""
+            <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 0.65rem 0.8rem; margin-bottom: 0.85rem; color: #f8fafc; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="color: #94a3b8;">Backend API:</span>
+                    <span style="font-weight: 600; color: {"#4ade80" if api_online else "#f87171"};">{"Online" if api_online else "Offline"}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="color: #94a3b8;">Retrieval Mode:</span>
+                    <span style="font-weight: 600; color: #38bdf8;">{mode_badge}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="color: #94a3b8;">Ollama Host:</span>
+                    <span style="font-weight: 600;">{ollama_status}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #94a3b8;">Model ({model_name}):</span>
+                    <span style="font-weight: 600;">{model_status}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown("---")
-        st.subheader("📚 Preset Demonstrations")
-        demo_1 = st.button("1. Pediatric dentists in Houston", use_container_width=True)
-        demo_2 = st.button("2. Pediatric dental anxiety & guidance", use_container_width=True)
-        demo_3 = st.button("3. Child dental health education", use_container_width=True)
-        demo_4 = st.button("4. Multi-source evidence comparison", use_container_width=True)
+        st.markdown(
+            "<div style='border-top: 1px solid #334155; margin: 0.5rem 0 0.8rem 0;'></div>",
+            unsafe_allow_html=True,
+        )
+        st.subheader("⚡ Quick Demonstrations")
+        st.caption("Click a preset to populate the search query without auto-executing:")
+
+        if "selected_preset_idx" not in st.session_state:
+            st.session_state["selected_preset_idx"] = None
+        if "query_input_text" not in st.session_state:
+            st.session_state["query_input_text"] = "Find pediatric dentists in Houston, Texas."
+
+        presets = [
+            {
+                "idx": 1,
+                "label": "1. Pediatric Dentist Discovery",
+                "desc": "Houston pediatric dentists NPI registry search.",
+                "query": "Find pediatric dentists in Houston, Texas.",
+            },
+            {
+                "idx": 2,
+                "label": "2. Best Dentists + Research",
+                "desc": "Pediatric dentists in Houston + dental anxiety research.",
+                "query": "Find the best pediatric dentists in Houston, Texas, and research pediatric dental anxiety.",
+            },
+            {
+                "idx": 3,
+                "label": "3. Tooth Cavity / Find Dentists",
+                "desc": "Symptom routing (cavity -> General Dentistry) near Houston.",
+                "query": "I live in Houston, Texas. I think I have a tooth cavity. Find the best dentists near me.",
+            },
+            {
+                "idx": 4,
+                "label": "4. Pediatric Dental Anxiety",
+                "desc": "Clinical PubMed research on pediatric dental anxiety.",
+                "query": "What does clinical research say about managing dental anxiety in children?",
+            },
+            {
+                "idx": 5,
+                "label": "5. Child Dental Health",
+                "desc": "Evidence-based patient education from MedlinePlus.",
+                "query": "Find evidence-based patient education about children's dental health and preventive care.",
+            },
+            {
+                "idx": 6,
+                "label": "6. Compare Healthcare Evidence",
+                "desc": "Compare PubMed clinical literature and MedlinePlus topics.",
+                "query": "Compare clinical research and patient education about pediatric dental anxiety.",
+            },
+        ]
+
+        for p in presets:
+            is_active = st.session_state.get("selected_preset_idx") == p["idx"]
+            prefix = "👉 " if is_active else ""
+            if st.button(
+                f"{prefix}{p['label']}",
+                key=f"preset_btn_{p['idx']}",
+                use_container_width=True,
+                type="secondary" if not is_active else "primary",
+                help=str(p["desc"]),
+            ):
+                st.session_state["selected_preset_idx"] = p["idx"]
+                st.session_state["query_input_text"] = p["query"]
+                st.session_state["search_query_field"] = p["query"]
+                st.rerun()
 
         mode_override = st.selectbox(
             "Mode Override",
@@ -76,17 +156,10 @@ def main() -> None:
             "LangGraph, FastAPI, and Streamlit."
         )
 
-    preset_query = ""
-    if demo_1:
-        preset_query = "Find pediatric dentists in Houston"
-    elif demo_2:
-        preset_query = "Find pediatric dentists in Houston and research on pediatric dental anxiety"
-    elif demo_3:
-        preset_query = "Find patient education for child dental health"
-    elif demo_4:
-        preset_query = "Compare publicly available provider data and clinical literature for pediatric dentists in Houston"
-
-    render_disclaimer_banner(is_synthetic=(selected_mode == "fixtures"))
+    render_disclaimer_banner(
+        is_synthetic=(selected_mode == "fixtures"),
+        retrieval_mode=selected_mode or "live",
+    )
 
     st.subheader("🔎 Discover Healthcare Providers & Clinical Evidence")
     with st.form("search_form", clear_on_submit=False):
@@ -94,18 +167,20 @@ def main() -> None:
         with col_query:
             user_query = st.text_input(
                 "Enter your healthcare search query:",
-                value=preset_query
-                if preset_query
-                else "Find pediatric dentists in Houston and research on pediatric dental anxiety",
+                value=st.session_state.get(
+                    "query_input_text",
+                    "Find pediatric dentists in Houston, Texas.",
+                ),
                 placeholder="e.g. Find pediatric dentists in Houston and research on dental anxiety",
                 label_visibility="collapsed",
+                key="search_query_field",
             )
         with col_btn:
             submit_search = st.form_submit_button(
                 "🔍 Search", use_container_width=True, type="primary"
             )
 
-    if submit_search or preset_query:
+    if submit_search:
         if not user_query.strip():
             st.warning("Please enter a valid search query.")
             return
@@ -153,13 +228,17 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
 
-        tab_providers, tab_research, tab_education, tab_cms = st.tabs(
-            [
-                f"🩺 Providers ({len(resp.provider_candidates)})",
-                f"🔬 Research ({len(resp.clinical_research)})",
-                f"📖 Patient Education ({len(resp.patient_education)})",
-                f"🏛️ CMS Quality ({len(resp.cms_quality_data)})",
-            ]
+        tab_providers, tab_research, tab_education, tab_cms, tab_workflow, tab_observability = (
+            st.tabs(
+                [
+                    f"🩺 Providers ({len(resp.provider_candidates)})",
+                    f"🔬 Research ({len(resp.clinical_research)})",
+                    f"📖 Patient Education ({len(resp.patient_education)})",
+                    f"🏛️ CMS Quality ({len(resp.cms_quality_data)})",
+                    "⚡ Agent Workflow & Query Fan-Out",
+                    f"🧠 Execution Telemetry ({len(resp.execution_events)})",
+                ]
+            )
         )
 
         with tab_providers:
@@ -194,6 +273,12 @@ def main() -> None:
 
         with tab_cms:
             render_cms_data_section(resp.cms_quality_data, resp.missing_information)
+
+        with tab_workflow:
+            render_agent_workflow_and_fanout(resp)
+
+        with tab_observability:
+            render_execution_observability(resp)
 
         render_provenance_and_citations(resp)
 

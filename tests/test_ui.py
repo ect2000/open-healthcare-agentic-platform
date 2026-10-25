@@ -9,6 +9,7 @@ from streamlit.testing.v1 import AppTest
 
 from healthcare_agents.api.schemas import (
     EvidenceItemResponse,
+    ExecutionEvent,
     HealthResponse,
     ProvenanceResponse,
     ReadinessResponse,
@@ -18,6 +19,8 @@ from healthcare_agents.ui.api_client import HealthcareApiClient
 from healthcare_agents.ui.components import (
     render_cms_data_section,
     render_disclaimer_banner,
+    render_execution_observability,
+    render_header,
     render_medlineplus_card,
     render_provenance_and_citations,
     render_provider_card,
@@ -125,6 +128,30 @@ def sample_search_response() -> SearchResponse:
         execution_metadata={"provider_count": 1, "clinical_count": 1, "education_count": 1},
         limitations_disclaimer="Administrative disclaimer text",
         created_at="2026-10-25T10:00:00Z",
+        execution_events=[
+            ExecutionEvent(
+                request_id="req-test-12345",
+                stage="Planner Agent",
+                tool_name="Gemma 4 Planner",
+                status="completed",
+                start_time="2026-10-25T10:00:00Z",
+                end_time="2026-10-25T10:00:01Z",
+                duration_ms=1000.0,
+                query_summary="Find pediatric dentists",
+                result_count=1,
+            ),
+            ExecutionEvent(
+                request_id="req-test-12345",
+                stage="NPPES Retrieval",
+                tool_name="NPPESProviderRetriever",
+                status="completed",
+                start_time="2026-10-25T10:00:01Z",
+                end_time="2026-10-25T10:00:02Z",
+                duration_ms=1000.0,
+                query_summary="specialty='Pediatric Dentistry'",
+                result_count=1,
+            ),
+        ],
     )
 
 
@@ -248,6 +275,12 @@ def test_ui_components_render(sample_search_response: SearchResponse) -> None:
             [],
         )
 
+        # Render header
+        render_header()
+
+        # Render observability
+        render_execution_observability(sample_search_response)
+
         # Render provenance and citations
         render_provenance_and_citations(sample_search_response)
 
@@ -323,3 +356,55 @@ def test_streamlit_app_test_search_flow(sample_search_response: SearchResponse) 
         if len(at.button) > 0:
             at.button[0].click().run()
         assert not at.exception
+
+
+def test_streamlit_preset_buttons_populate_query_without_autosubmit() -> None:
+    """Verify that clicking a Quick Demonstration preset button populates query without auto-executing search."""
+    with (
+        patch("healthcare_agents.ui.api_client.HealthcareApiClient.check_health") as mock_h,
+        patch("healthcare_agents.ui.api_client.HealthcareApiClient.check_readiness") as mock_r,
+        patch("healthcare_agents.ui.api_client.HealthcareApiClient.search") as mock_s,
+    ):
+        mock_h.return_value = HealthResponse(
+            status="healthy",
+            version="0.6.0",
+            environment="development",
+            timestamp="2026-10-25T10:00:00Z",
+        )
+        mock_r.return_value = ReadinessResponse(
+            ready=True,
+            status="ready",
+            version="0.6.0",
+            ollama_service_available=True,
+            model_installed=True,
+            model_name="gemma4:e2b",
+            retrieval_mode="fixtures",
+            four_sources_configured=True,
+            details={},
+        )
+
+        import inspect
+
+        import healthcare_agents.ui.app as ui_app_module
+
+        script_path = inspect.getfile(ui_app_module)
+        at = AppTest.from_file(script_path, default_timeout=15.0)
+        at.run()
+        assert not at.exception
+
+        # Verify all 6 preset buttons exist
+        preset_buttons = [b for b in at.button if "preset_btn_" in (b.key or "")]
+        assert len(preset_buttons) == 6
+
+        # Click preset 3 (Tooth Cavity)
+        preset_3 = next(b for b in preset_buttons if b.key == "preset_btn_3")
+        preset_3.click().run()
+        assert not at.exception
+
+        # Verify query input is populated with preset query text
+        expected_query = "I live in Houston, Texas. I think I have a tooth cavity. Find the best dentists near me."
+        assert at.session_state["query_input_text"] == expected_query
+        assert at.session_state["selected_preset_idx"] == 3
+
+        # Crucial requirement: clicking preset must NOT trigger search execution automatically
+        mock_s.assert_not_called()

@@ -9,6 +9,7 @@ from typing import cast
 from healthcare_agents import __version__
 from healthcare_agents.api.schemas import (
     EvidenceItemResponse,
+    ExecutionEvent,
     HealthResponse,
     ProvenanceResponse,
     ReadinessResponse,
@@ -226,6 +227,7 @@ class HealthcareSearchService:
                 "model_name": self.settings.model_name,
                 "result_limit": request.result_limit or 10,
             },
+            "execution_events": [],
         }
 
         raw_state = app.invoke(initial_state)
@@ -302,10 +304,34 @@ class HealthcareSearchService:
         exec_metadata["education_count"] = len(education)
         exec_metadata["excluded_count"] = len(excluded)
 
+        raw_events = final_state.get("execution_events", [])
+        events = [
+            ExecutionEvent(
+                request_id=ev.get("request_id", req_id),
+                trace_id=ev.get("trace_id"),
+                span_id=ev.get("span_id"),
+                parent_span_id=ev.get("parent_span_id"),
+                query_id=ev.get("query_id"),
+                dependency_ids=ev.get("dependency_ids", []),
+                stage=ev.get("stage", "Unknown"),
+                tool_name=ev.get("tool_name"),
+                status=ev.get("status", "completed"),
+                start_time=ev.get("start_time", ""),
+                end_time=ev.get("end_time", ""),
+                duration_ms=ev.get("duration_ms", 0.0),
+                query_summary=ev.get("query_summary", ""),
+                result_count=ev.get("result_count", 0),
+                error_type=ev.get("error_type"),
+                output_summary=ev.get("output_summary", ""),
+            )
+            for ev in raw_events
+        ]
+
         return SearchResponse(
             request_id=req_id,
             query=request.query,
             interpreted_intent=dict(final_state.get("search_plan", {})),
+            retrieval_mode=effective_mode,
             provider_candidates=providers,
             clinical_research=research,
             cms_quality_data=cms,
@@ -319,4 +345,6 @@ class HealthcareSearchService:
             execution_metadata=exec_metadata,
             limitations_disclaimer=DISCLAIMER_TEXT,
             created_at=created_at,
+            fanout_plan=final_state.get("fanout_plan", {}),
+            execution_events=events,
         )

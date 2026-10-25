@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from langgraph.graph import END, START, StateGraph
@@ -103,11 +105,11 @@ def create_healthcare_graph(
 ) -> StateGraph[HealthcareWorkflowState]:
     """Build and return an uncompiled StateGraph for healthcare multi-agent discovery."""
     from healthcare_agents.agents.answer import synthesize_answer
-    from healthcare_agents.agents.evidence import retrieve_evidence
     from healthcare_agents.agents.evidence_processor import process_evidence_node
     from healthcare_agents.agents.planner import plan_query
-    from healthcare_agents.agents.provider import retrieve_providers
     from healthcare_agents.agents.validator import validate_records
+    from healthcare_agents.planning.fanout import generate_fanout_plan
+    from healthcare_agents.retrieval.parallel_retriever import execute_parallel_retrieval
 
     workflow: StateGraph[HealthcareWorkflowState] = StateGraph(HealthcareWorkflowState)
     resolved_provider_retriever = (
@@ -125,46 +127,262 @@ def create_healthcare_graph(
         else get_default_patient_education_retriever()
     )
 
-    # Node wrappers injecting dependencies
+    # Node wrappers injecting dependencies with monotonic execution telemetry
     def planner_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return plan_query(state=state, model_adapter=model_adapter)
+        req_id = state.get("request_id", "")
+        events = list(state.get("execution_events", []))
+        t_start_iso = datetime.now(UTC).isoformat()
+        t0 = time.perf_counter()
+        status = "completed"
+        err_type = None
+        output_sum = ""
+        try:
+            res = plan_query(state=state, model_adapter=model_adapter)
+            plan = res.get("search_plan", {})
+            spec = plan.get("specialty", "")
+            city_st = f"{plan.get('city', '')}, {plan.get('state', '')}"
 
-    def provider_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return retrieve_providers(
-            state=state,
+            # Generate structured multi-source fan-out plan
+            fanout = generate_fanout_plan(
+                request_id=req_id,
+                original_query=state.get("original_query", ""),
+                search_plan=plan,
+                model_adapter=model_adapter,
+            )
+            output_sum = (
+                f"Plan: {spec} in {city_st}; {len(fanout.queries)} queries planned across "
+                f"NPPES, PubMed, MedlinePlus, CMS"
+            )
+            return {
+                **res,
+                "fanout_plan": fanout.model_dump(),
+                "execution_events": events,
+            }
+        except Exception as e:
+            status = "failed"
+            err_type = type(e).__name__
+            output_sum = str(e)
+            raise
+        finally:
+            t1 = time.perf_counter()
+            t_end_iso = datetime.now(UTC).isoformat()
+            duration_ms = round((t1 - t0) * 1000.0, 2)
+            events.append(
+                {
+                    "request_id": req_id,
+                    "stage": "Planner Agent",
+                    "tool_name": "Gemma 4 Planner",
+                    "status": status,
+                    "start_time": t_start_iso,
+                    "end_time": t_end_iso,
+                    "duration_ms": duration_ms,
+                    "query_summary": state.get("original_query", "")[:100],
+                    "result_count": 1 if status == "completed" else 0,
+                    "error_type": err_type,
+                    "output_summary": output_sum,
+                }
+            )
+
+    def retrieval_orchestrator_node(state: HealthcareWorkflowState) -> dict[str, Any]:
+        req_id = state.get("request_id", "")
+        events = list(state.get("execution_events", []))
+        errors = list(state.get("errors", []))
+        fanout_dict = state.get("fanout_plan", {})
+
+        from healthcare_agents.planning.fanout_schema import FanOutPlan
+
+        if fanout_dict:
+            fanout = FanOutPlan.model_validate(fanout_dict)
+        else:
+            fanout = generate_fanout_plan(
+                request_id=req_id,
+                original_query=state.get("original_query", ""),
+                search_plan=state.get("search_plan", {}),
+                model_adapter=model_adapter,
+            )
+
+        # Execute parallel retrieval
+        parallel_results = execute_parallel_retrieval(
+            fanout_plan=fanout,
             provider_retriever=resolved_provider_retriever,
-            quality_retriever=resolved_quality_retriever,
-        )
-
-    def evidence_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return retrieve_evidence(
-            state=state,
             evidence_retriever=resolved_evidence_retriever,
             patient_education_retriever=resolved_education_retriever,
+            quality_retriever=resolved_quality_retriever,
+            max_workers=4,
         )
 
+        # Merge execution events from parallel branches
+        for ev in parallel_results.get("execution_events", []):
+            events.append(ev)
+
+        # Build citations
+        citations = list(state.get("citations", []))
+        for item in parallel_results.get("clinical_evidence", []):
+            url_part = f" <{item.pubmed_url}>" if item.pubmed_url else ""
+            cite = f"[{item.source}: {item.citation_ref}] {item.title} ({item.year}){url_part}"
+            if cite not in citations:
+                citations.append(cite)
+
+        for edu_item in parallel_results.get("patient_education_evidence", []):
+            url_display = edu_item.official_url or edu_item.pubmed_url
+            url_part = f" <{url_display}>" if url_display else ""
+            cite = (
+                f"[{edu_item.source}: {edu_item.citation_ref}] "
+                f"{edu_item.title} ({edu_item.year}){url_part}"
+            )
+            if cite not in citations:
+                citations.append(cite)
+
+        errors.extend(parallel_results.get("errors", []))
+
+        return {
+            "provider_candidates": parallel_results.get("provider_candidates", []),
+            "clinical_evidence": parallel_results.get("clinical_evidence", []),
+            "patient_education_evidence": parallel_results.get("patient_education_evidence", []),
+            "cms_quality": parallel_results.get("cms_quality", []),
+            "unmatched_cms_records": parallel_results.get("unmatched_cms_records", []),
+            "fanout_plan": parallel_results.get("fanout_plan", {}),
+            "citations": citations,
+            "execution_events": events,
+            "errors": errors,
+        }
+
     def processor_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return process_evidence_node(state=state)
+        req_id = state.get("request_id", "")
+        events = list(state.get("execution_events", []))
+        t_start_iso = datetime.now(UTC).isoformat()
+        t0 = time.perf_counter()
+        status = "completed"
+        err_type = None
+        output_sum = ""
+        item_count = 0
+        try:
+            res = process_evidence_node(state=state)
+            item_count = len(res.get("unified_evidence", []))
+            output_sum = (
+                f"Normalized {item_count} items, {len(res.get('excluded_evidence', []))} excluded"
+            )
+            return {**res, "execution_events": events}
+        except Exception as e:
+            status = "failed"
+            err_type = type(e).__name__
+            output_sum = str(e)
+            raise
+        finally:
+            t1 = time.perf_counter()
+            raw_prov = len(state.get("provider_candidates", []))
+            raw_clin = len(state.get("clinical_evidence", []))
+            raw_edu = len(state.get("patient_education_evidence", []))
+            raw_cms = len(state.get("cms_quality", []))
+            raw_total = raw_prov + raw_clin + raw_edu + raw_cms
+            events.append(
+                {
+                    "request_id": req_id,
+                    "stage": "Evidence Processor",
+                    "tool_name": "UnifiedEvidencePipeline",
+                    "status": status,
+                    "start_time": t_start_iso,
+                    "end_time": datetime.now(UTC).isoformat(),
+                    "duration_ms": round((t1 - t0) * 1000.0, 2),
+                    "query_summary": (
+                        f"Input retrieved: {raw_total} total ({raw_prov} providers, "
+                        f"{raw_clin} research, {raw_edu} education, {raw_cms} CMS)"
+                    ),
+                    "result_count": item_count,
+                    "error_type": err_type,
+                    "output_summary": (
+                        f"Retained: {item_count} normalized & ranked items "
+                        f"({len(res.get('excluded_evidence', []))} excluded)"
+                        if status == "completed"
+                        else output_sum
+                    ),
+                }
+            )
 
     def validation_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return validate_records(state=state)
+        req_id = state.get("request_id", "")
+        events = list(state.get("execution_events", []))
+        t_start_iso = datetime.now(UTC).isoformat()
+        t0 = time.perf_counter()
+        status = "completed"
+        err_type = None
+        output_sum = ""
+        try:
+            res = validate_records(state=state)
+            val = res.get("validation_results", {})
+            output_sum = f"Valid: {val.get('is_valid', True)}, notes: {len(val.get('notes', []))}"
+            return {**res, "execution_events": events}
+        except Exception as e:
+            status = "failed"
+            err_type = type(e).__name__
+            output_sum = str(e)
+            raise
+        finally:
+            t1 = time.perf_counter()
+            events.append(
+                {
+                    "request_id": req_id,
+                    "stage": "Deterministic Validator",
+                    "tool_name": "ClinicalValidator",
+                    "status": status,
+                    "start_time": t_start_iso,
+                    "end_time": datetime.now(UTC).isoformat(),
+                    "duration_ms": round((t1 - t0) * 1000.0, 2),
+                    "query_summary": (f"Validate {len(state.get('unified_evidence', []))} items"),
+                    "result_count": len(state.get("unified_evidence", [])),
+                    "error_type": err_type,
+                    "output_summary": output_sum,
+                }
+            )
 
     def answer_node(state: HealthcareWorkflowState) -> dict[str, Any]:
-        return synthesize_answer(state=state, model_adapter=model_adapter)
+        req_id = state.get("request_id", "")
+        events = list(state.get("execution_events", []))
+        t_start_iso = datetime.now(UTC).isoformat()
+        t0 = time.perf_counter()
+        status = "completed"
+        err_type = None
+        ans_len = 0
+        try:
+            res = synthesize_answer(state=state, model_adapter=model_adapter)
+            ans = res.get("final_answer", "")
+            ans_len = len(ans)
+            return {**res, "execution_events": events}
+        except Exception as e:
+            status = "failed"
+            err_type = type(e).__name__
+            raise
+        finally:
+            t1 = time.perf_counter()
+            events.append(
+                {
+                    "request_id": req_id,
+                    "stage": "Gemma 4 Synthesis",
+                    "tool_name": "Gemma 4 Answer Synthesis",
+                    "status": status,
+                    "start_time": t_start_iso,
+                    "end_time": datetime.now(UTC).isoformat(),
+                    "duration_ms": round((t1 - t0) * 1000.0, 2),
+                    "query_summary": (
+                        f"Synthesize answer with {len(state.get('unified_evidence', []))} citations"
+                    ),
+                    "result_count": 1 if ans_len > 0 else 0,
+                    "error_type": err_type,
+                    "output_summary": f"Generated grounded answer ({ans_len} chars)",
+                }
+            )
 
     workflow.add_node("planner", planner_node)
-    workflow.add_node("provider_retrieval", provider_node)
-    workflow.add_node("evidence_retrieval", evidence_node)
+    workflow.add_node("retrieval_orchestrator", retrieval_orchestrator_node)
     workflow.add_node("evidence_processor", processor_node)
     workflow.add_node("validator", validation_node)
     workflow.add_node("answer_synthesis", answer_node)
 
-    # Flow: START -> planner -> provider_retrieval -> evidence_retrieval
+    # Flow: START -> planner -> retrieval_orchestrator (parallel NPPES/PubMed/MedlinePlus + CMS)
     # -> evidence_processor -> validator -> answer_synthesis -> END
     workflow.add_edge(START, "planner")
-    workflow.add_edge("planner", "provider_retrieval")
-    workflow.add_edge("provider_retrieval", "evidence_retrieval")
-    workflow.add_edge("evidence_retrieval", "evidence_processor")
+    workflow.add_edge("planner", "retrieval_orchestrator")
+    workflow.add_edge("retrieval_orchestrator", "evidence_processor")
     workflow.add_edge("evidence_processor", "validator")
     workflow.add_edge("validator", "answer_synthesis")
     workflow.add_edge("answer_synthesis", END)
@@ -208,6 +426,7 @@ def run_healthcare_workflow(
         "final_answer": "",
         "errors": [],
         "execution_metadata": {},
+        "execution_events": [],
     }
 
     raw_result = app.invoke(initial_state)

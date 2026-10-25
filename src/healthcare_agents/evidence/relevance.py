@@ -63,7 +63,22 @@ def assess_provider_relevance(
                     ),
                     matched_terms=tuple(matched),
                 )
-        elif target_clean in spec:
+        elif "dent" in target_clean:
+            # Dentistry or General Practice Dentistry
+            if "dent" in spec:
+                matched.append("dentistry")
+                score += 0.3
+            else:
+                return RelevanceAssessment(
+                    score=0.1,
+                    is_relevant=False,
+                    selection_reason="",
+                    exclusion_reason=(
+                        f"Specialty '{spec}' does not match dental query '{target_specialty}'"
+                    ),
+                    matched_terms=tuple(matched),
+                )
+        elif target_clean in spec or spec in target_clean:
             matched.append(target_clean)
             score += 0.2
         else:
@@ -210,25 +225,106 @@ def assess_medlineplus_relevance(
             ),
         )
 
-    # Direct topical relevance
+    # Direct topical relevance with stopword filtering
     matched: list[str] = []
     topics_to_check = list(target_topics) if target_topics else [query_intent]
+    common_stopwords = {
+        "find",
+        "best",
+        "the",
+        "and",
+        "for",
+        "with",
+        "about",
+        "from",
+        "this",
+        "that",
+        "near",
+        "what",
+        "does",
+        "texas",
+        "houston",
+        "here",
+        "there",
+        "please",
+        "help",
+        "live",
+        "city",
+        "state",
+        "location",
+        "research",
+    }
     for topic in topics_to_check:
-        words = [w for w in re.split(r"\W+", topic.lower()) if len(w) > 3]
+        words = [
+            w for w in re.split(r"\W+", topic.lower()) if len(w) > 3 and w not in common_stopwords
+        ]
         for w in words:
-            if w in combined_text:
+            if re.search(r"\b" + re.escape(w), combined_text):
                 matched.append(w)
 
     query_lower = query_intent.lower()
-    if "child" in combined_text and "dent" in combined_text:
-        matched.append("child dental health")
-    if "anxiety" in combined_text or "phobia" in combined_text:
-        matched.append("anxiety/phobia")
+    is_dental_query = (
+        "dent" in query_lower
+        or "dental" in query_lower
+        or "tooth" in query_lower
+        or "teeth" in query_lower
+    )
 
-    # Dental query guardrail: exclude unrelated broad medical topics
-    if ("dent" in query_lower or "dental" in query_lower) and not any(
-        t in combined_text for t in ("dent", "teeth", "tooth", "oral", "mouth", "anxiety", "phobia")
-    ):
+    # Unrelated medical condition exclusions for dental searches
+    unrelated_conditions = (
+        "eating disorder",
+        "substance abuse",
+        "drug use",
+        "drugs and young",
+        "dementia",
+        "obesity",
+        "anorexia",
+        "bulimia",
+        "birth control",
+        "developmental disabilities",
+        "mitral valve prolapse",
+        "rickets",
+        "tonsillitis",
+        "scleroderma",
+        "sleep disorders",
+        "diabetes complications",
+    )
+    if is_dental_query and any(cond in title for cond in unrelated_conditions):
+        return RelevanceAssessment(
+            score=0.05,
+            is_relevant=False,
+            selection_reason="",
+            exclusion_reason=(
+                f"Topic '{item.title_or_name}' addresses an unrelated medical condition "
+                f"rather than dental care or dental fear."
+            ),
+            matched_terms=(),
+        )
+
+    # Oral health and emotional/anxiety presence checks
+    has_oral = any(
+        re.search(r"\b" + re.escape(t), combined_text)
+        for t in (
+            "dent",
+            "dental",
+            "dentist",
+            "dentists",
+            "teeth",
+            "tooth",
+            "oral",
+            "mouth",
+            "cavity",
+            "cavities",
+            "decay",
+            "caries",
+        )
+    )
+    has_anx = any(
+        re.search(r"\b" + re.escape(t), combined_text)
+        for t in ("anxiety", "phobia", "phobias", "fear", "nervous")
+    )
+
+    if is_dental_query and not (has_oral or has_anx):
         return RelevanceAssessment(
             score=0.1,
             is_relevant=False,
@@ -239,6 +335,25 @@ def assess_medlineplus_relevance(
             matched_terms=(),
         )
 
+    # Classify educational tier: Directly relevant vs. Related general education
+    is_child = (
+        "child" in combined_text or "pediatric" in combined_text or "children" in combined_text
+    )
+    is_direct_pediatric_dental = is_child and has_oral
+    is_direct_dental_anxiety = has_oral and has_anx
+
+    if is_direct_pediatric_dental or is_direct_dental_anxiety:
+        tier_label = "Directly relevant education"
+        matched.append("pediatric-dental" if is_direct_pediatric_dental else "dental-anxiety")
+    elif has_oral:
+        tier_label = "Related general dental-health education"
+        matched.append("general-dental")
+    elif has_anx:
+        tier_label = "Related anxiety/fear consumer education"
+        matched.append("anxiety-management")
+    else:
+        tier_label = "General consumer education"
+
     if not matched:
         return RelevanceAssessment(
             score=0.15,
@@ -248,15 +363,15 @@ def assess_medlineplus_relevance(
         )
 
     unique_matches = set(matched)
-    score = min(1.0, len(unique_matches) * 0.4)
-    is_relevant = score >= 0.35
+    # Assign higher score to directly relevant educational topics
+    base_score = 0.9 if "Directly relevant" in tier_label else 0.65
+    score = min(1.0, base_score + (len(unique_matches) * 0.1))
+    is_relevant = score >= 0.40
 
     return RelevanceAssessment(
-        score=score,
+        score=round(score, 2),
         is_relevant=is_relevant,
-        selection_reason=(
-            f"Consumer health topic matches concepts: {', '.join(sorted(unique_matches))}"
-        ),
+        selection_reason=f"[{tier_label}] Matches concepts: {', '.join(sorted(unique_matches))}",
         exclusion_reason=""
         if is_relevant
         else "Topic is too peripheral to the primary health query.",
