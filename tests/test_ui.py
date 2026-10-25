@@ -356,3 +356,55 @@ def test_streamlit_app_test_search_flow(sample_search_response: SearchResponse) 
         if len(at.button) > 0:
             at.button[0].click().run()
         assert not at.exception
+
+
+def test_streamlit_preset_buttons_populate_query_without_autosubmit() -> None:
+    """Verify that clicking a Quick Demonstration preset button populates query without auto-executing search."""
+    with (
+        patch("healthcare_agents.ui.api_client.HealthcareApiClient.check_health") as mock_h,
+        patch("healthcare_agents.ui.api_client.HealthcareApiClient.check_readiness") as mock_r,
+        patch("healthcare_agents.ui.api_client.HealthcareApiClient.search") as mock_s,
+    ):
+        mock_h.return_value = HealthResponse(
+            status="healthy",
+            version="0.6.0",
+            environment="development",
+            timestamp="2026-10-25T10:00:00Z",
+        )
+        mock_r.return_value = ReadinessResponse(
+            ready=True,
+            status="ready",
+            version="0.6.0",
+            ollama_service_available=True,
+            model_installed=True,
+            model_name="gemma4:e2b",
+            retrieval_mode="fixtures",
+            four_sources_configured=True,
+            details={},
+        )
+
+        import inspect
+
+        import healthcare_agents.ui.app as ui_app_module
+
+        script_path = inspect.getfile(ui_app_module)
+        at = AppTest.from_file(script_path, default_timeout=15.0)
+        at.run()
+        assert not at.exception
+
+        # Verify all 6 preset buttons exist
+        preset_buttons = [b for b in at.button if "preset_btn_" in (b.key or "")]
+        assert len(preset_buttons) == 6
+
+        # Click preset 3 (Tooth Cavity)
+        preset_3 = next(b for b in preset_buttons if b.key == "preset_btn_3")
+        preset_3.click().run()
+        assert not at.exception
+
+        # Verify query input is populated with preset query text
+        expected_query = "I live in Houston, Texas. I think I have a tooth cavity. Find the best dentists near me."
+        assert at.session_state["query_input_text"] == expected_query
+        assert at.session_state["selected_preset_idx"] == 3
+
+        # Crucial requirement: clicking preset must NOT trigger search execution automatically
+        mock_s.assert_not_called()

@@ -63,7 +63,22 @@ def assess_provider_relevance(
                     ),
                     matched_terms=tuple(matched),
                 )
-        elif target_clean in spec:
+        elif "dent" in target_clean:
+            # Dentistry or General Practice Dentistry
+            if "dent" in spec:
+                matched.append("dentistry")
+                score += 0.3
+            else:
+                return RelevanceAssessment(
+                    score=0.1,
+                    is_relevant=False,
+                    selection_reason="",
+                    exclusion_reason=(
+                        f"Specialty '{spec}' does not match dental query '{target_specialty}'"
+                    ),
+                    matched_terms=tuple(matched),
+                )
+        elif target_clean in spec or spec in target_clean:
             matched.append(target_clean)
             score += 0.2
         else:

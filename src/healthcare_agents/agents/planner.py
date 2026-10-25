@@ -81,7 +81,10 @@ def plan_query(
     if not plan["specialty"]:
         if "pediatric dentist" in lower_q or "pediatric dentistry" in lower_q:
             plan["specialty"] = "Pediatric Dentistry"
-        elif "dentist" in lower_q:
+        elif "cavity" in lower_q or "tooth decay" in lower_q or "caries" in lower_q:
+            # Symptom-aware routing: possible cavity routes to General Dentistry
+            plan["specialty"] = "General Practice Dentistry"
+        elif "dentist" in lower_q or "dental" in lower_q:
             plan["specialty"] = "Dentistry"
         elif "cardio" in lower_q or "heart" in lower_q:
             plan["specialty"] = "Cardiology"
@@ -89,15 +92,23 @@ def plan_query(
             plan["specialty"] = "Pediatrics"
 
     if not plan["city"]:
+        # When a patient mentions a city and says 'near me'
+        # (e.g. 'I live in Houston. Find dentists near me'),
+        # use the supplied city without demanding a zip code or inventing physical distances.
         if "houston" in lower_q:
             plan["city"] = "Houston"
             plan["state"] = plan["state"] or "TX"
         elif "austin" in lower_q:
             plan["city"] = "Austin"
             plan["state"] = plan["state"] or "TX"
+        elif "dallas" in lower_q:
+            plan["city"] = "Dallas"
+            plan["state"] = plan["state"] or "TX"
 
     if not plan["evidence_topics"]:
         extracted_topics: list[str] = []
+        if "cavity" in lower_q or "tooth decay" in lower_q or "caries" in lower_q:
+            extracted_topics.append("tooth decay")
         if "dental anxiety" in lower_q or "anxiety" in lower_q:
             extracted_topics.append("dental anxiety")
         if plan["specialty"]:

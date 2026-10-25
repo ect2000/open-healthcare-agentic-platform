@@ -58,11 +58,67 @@ def main() -> None:
             st.warning("Backend readiness probe uncontactable.")
 
         st.markdown("---")
-        st.subheader("📚 Preset Demonstrations")
-        demo_1 = st.button("1. Pediatric dentists in Houston", use_container_width=True)
-        demo_2 = st.button("2. Pediatric dental anxiety & guidance", use_container_width=True)
-        demo_3 = st.button("3. Child dental health education", use_container_width=True)
-        demo_4 = st.button("4. Multi-source evidence comparison", use_container_width=True)
+        st.markdown("---")
+        st.subheader("⚡ Quick Demonstrations")
+        st.caption("Click a preset to populate the search query without auto-executing:")
+
+        if "selected_preset_idx" not in st.session_state:
+            st.session_state["selected_preset_idx"] = None
+        if "query_input_text" not in st.session_state:
+            st.session_state["query_input_text"] = "Find pediatric dentists in Houston, Texas."
+
+        presets = [
+            {
+                "idx": 1,
+                "label": "1. Pediatric Dentist Discovery",
+                "desc": "Houston pediatric dentists NPI registry search.",
+                "query": "Find pediatric dentists in Houston, Texas.",
+            },
+            {
+                "idx": 2,
+                "label": "2. Best Dentists + Research",
+                "desc": "Pediatric dentists in Houston + dental anxiety research.",
+                "query": "Find the best pediatric dentists in Houston, Texas, and research pediatric dental anxiety.",
+            },
+            {
+                "idx": 3,
+                "label": "3. Tooth Cavity / Find Dentists",
+                "desc": "Symptom routing (cavity -> General Dentistry) near Houston.",
+                "query": "I live in Houston, Texas. I think I have a tooth cavity. Find the best dentists near me.",
+            },
+            {
+                "idx": 4,
+                "label": "4. Pediatric Dental Anxiety",
+                "desc": "Clinical PubMed research on pediatric dental anxiety.",
+                "query": "What does clinical research say about managing dental anxiety in children?",
+            },
+            {
+                "idx": 5,
+                "label": "5. Child Dental Health",
+                "desc": "Evidence-based patient education from MedlinePlus.",
+                "query": "Find evidence-based patient education about children's dental health and preventive care.",
+            },
+            {
+                "idx": 6,
+                "label": "6. Compare Healthcare Evidence",
+                "desc": "Compare PubMed clinical literature and MedlinePlus topics.",
+                "query": "Compare clinical research and patient education about pediatric dental anxiety.",
+            },
+        ]
+
+        for p in presets:
+            is_active = st.session_state.get("selected_preset_idx") == p["idx"]
+            prefix = "👉 " if is_active else ""
+            if st.button(
+                f"{prefix}{p['label']}",
+                key=f"preset_btn_{p['idx']}",
+                use_container_width=True,
+                type="secondary" if not is_active else "primary",
+                help=str(p["desc"]),
+            ):
+                st.session_state["selected_preset_idx"] = p["idx"]
+                st.session_state["query_input_text"] = p["query"]
+                st.rerun()
 
         mode_override = st.selectbox(
             "Mode Override",
@@ -78,16 +134,6 @@ def main() -> None:
             "LangGraph, FastAPI, and Streamlit."
         )
 
-    preset_query = ""
-    if demo_1:
-        preset_query = "Find pediatric dentists in Houston"
-    elif demo_2:
-        preset_query = "Find pediatric dentists in Houston and research on pediatric dental anxiety"
-    elif demo_3:
-        preset_query = "Find patient education for child dental health"
-    elif demo_4:
-        preset_query = "Compare publicly available provider data and clinical literature for pediatric dentists in Houston"
-
     render_disclaimer_banner(
         is_synthetic=(selected_mode == "fixtures"),
         retrieval_mode=selected_mode or "live",
@@ -99,18 +145,20 @@ def main() -> None:
         with col_query:
             user_query = st.text_input(
                 "Enter your healthcare search query:",
-                value=preset_query
-                if preset_query
-                else "Find pediatric dentists in Houston and research on pediatric dental anxiety",
+                value=st.session_state.get(
+                    "query_input_text",
+                    "Find pediatric dentists in Houston, Texas.",
+                ),
                 placeholder="e.g. Find pediatric dentists in Houston and research on dental anxiety",
                 label_visibility="collapsed",
+                key="search_query_field",
             )
         with col_btn:
             submit_search = st.form_submit_button(
                 "🔍 Search", use_container_width=True, type="primary"
             )
 
-    if submit_search or preset_query:
+    if submit_search:
         if not user_query.strip():
             st.warning("Please enter a valid search query.")
             return

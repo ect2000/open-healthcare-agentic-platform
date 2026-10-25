@@ -48,8 +48,9 @@ def render_disclaimer_banner(is_synthetic: bool = False, retrieval_mode: str | N
             </div>
             <p style="color: #64748b; font-size: 0.82rem; margin: 0; line-height: 1.4;">
                 • <strong>NPPES Provider Registry</strong>: NPI is an administrative identifier and not proof of state licensure, clinical competence, or board certification.<br/>
-                • <strong>PubMed NCBI</strong>: Literature citations demonstrate published science; they do not attest to an individual doctor's personal qualifications.<br/>
-                • <strong>CMS Provider Data</strong>: Hospital/facility metrics cannot be ascribed to outpatient individual dentists. Missing CMS data denotes dataset reporting scope, not low clinical quality.<br/>
+                • <strong>Best-Match Ranking</strong>: "Best" or "top" queries are ranked strictly by objective geographic proximity, specialty completeness, and verifiable registry data. We never invent ratings, reviews, or clinical outcomes.<br/>
+                • <strong>Symptom Context & Urgent Care</strong>: Mentions of cavities or symptoms provide educational context and route to appropriate specialties without diagnosing. Severe pain or swelling requires immediate clinical evaluation.<br/>
+                • <strong>PubMed & CMS Data</strong>: Scientific publications and facility-level CMS metrics do not attest to an individual doctor's personal qualifications.<br/>
                 • <strong>MedlinePlus</strong>: Consumer health education for patient literacy only. Not a diagnostic substitute or personalized medical advice.
             </p>
         </div>

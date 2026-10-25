@@ -31,17 +31,27 @@ Milestone M7 introduces intelligent query fan-out decomposition, bounded concurr
    - Added a dedicated "⚡ Agent Workflow & Query Fan-Out" tab to the Streamlit application.
    - Renders a Mermaid pipeline graph, planned vs. dispatched queries table with status badges and parameters, and a parallel execution timeline.
 
-6. **Controlled Benchmarking**:
+6. **Quick Demonstration Presets & Symptom Routing**:
+   - Added 6 compact sidebar presets with populate-without-autosubmit:
+     1. Pediatric Dentist Discovery
+     2. Best Pediatric Dentists + Research
+     3. Tooth Cavity / Find Dentists (symptom-aware routing to General Dentistry + Houston-area near me scope)
+     4. Pediatric Dental Anxiety Research (PubMed)
+     5. Child Dental Health Education (MedlinePlus)
+     6. Compare Healthcare Evidence
+   - Preserves custom query input and provides transparent best-match ranking without fabricated reviews or ratings.
+
+7. **Controlled Benchmarking**:
    - Achieved a **42.75% latency reduction** in retrieval wall-clock duration under controlled benchmarking (target $\ge 25\%$).
 
 ---
 
 ## Verification Summary
 
-- **Pytest Suite**: 150 passed, 15 skipped in 61.39s
-- **Test Coverage**: 90.24% (exceeds 90% threshold)
-- **Ruff & Formatting**: All checks passed cleanly across 131 files
-- **Mypy Type Checking**: Success: no issues found in 69 source files
+- **Pytest Suite**: 161 passed, 15 skipped in 59.47s
+- **Test Coverage**: 90.55% (exceeds 90% threshold)
+- **Ruff & Formatting**: All checks passed cleanly across 140 files
+- **Mypy Type Checking**: Success: no issues found in 70 source files
 - **Package Build**: Built `healthcare_agents-0.6.0.tar.gz` and wheel
 - **Docker Compose**: API and UI services healthy and responsive
-- **Playwright Automation**: End-to-end automated UI acceptance and screenshots verified
+- **Playwright Automation**: End-to-end automated UI acceptance with preset testing and screenshots verified

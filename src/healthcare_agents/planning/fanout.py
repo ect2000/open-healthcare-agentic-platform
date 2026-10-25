@@ -190,6 +190,18 @@ def build_deterministic_fanout(
                 priority=2,
             )
         )
+    elif "cavity" in lower_q or "tooth decay" in lower_q or "caries" in lower_q:
+        plan.add_query(
+            PlannedQuery(
+                query_id=f"q-medline-{uuid.uuid4().hex[:6]}",
+                parent_request_id=request_id,
+                source="MedlinePlus",
+                query_text="tooth decay",
+                search_params={"keyword": "tooth decay", "limit": 3},
+                intent_category="patient_education",
+                priority=1,
+            )
+        )
     elif "child" in lower_q and "dent" in lower_q:
         plan.add_query(
             PlannedQuery(

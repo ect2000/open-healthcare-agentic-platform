@@ -15,17 +15,26 @@ async def main():
         await page.goto("http://localhost:8501", wait_until="networkidle")
         await page.wait_for_timeout(3000)
 
-        # 1. Capture initial page
+        # 1. Capture initial page with Quick Demonstration presets
         await page.screenshot(path="docs/images/m07_ui_initial.png", full_page=True)
-        print("Captured initial page screenshot")
+        print("Captured initial page screenshot with Quick Demonstration presets")
 
-        # 2. Trigger search
-        search_btn = page.locator('button:has-text("Search")').first
+        # 2. Click Preset 2 to demonstrate preset population
+        preset_2 = page.locator('button:has-text("2. Best Dentists + Research")').first
+        if await preset_2.is_visible():
+            await preset_2.click()
+            await page.wait_for_timeout(2000)
+            print("Clicked Preset 2; populated query input")
+
+        # Trigger search via form submit button
+        search_btn = page.locator('button[kind="primaryFormSubmit"]').first
+        if not await search_btn.is_visible():
+            search_btn = page.locator('button:has-text("Search")').first
         await search_btn.click()
         print("Clicked search button; waiting for results...")
 
         # Wait for the results to load
-        await page.wait_for_selector("text=Grounded Synthesis (Gemma 4)", timeout=60000)
+        await page.wait_for_selector("text=Grounded Synthesis", timeout=120000)
         await page.wait_for_timeout(3000)
 
         # Capture search results overview
