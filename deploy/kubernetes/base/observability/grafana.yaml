@@ -365,15 +365,21 @@ spec:
               containerPort: 3000
           env:
             - name: GF_SECURITY_ADMIN_USER
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-secrets
+                  key: GRAFANA_ADMIN_USER
             - name: GF_SECURITY_ADMIN_PASSWORD
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-secrets
+                  key: GRAFANA_ADMIN_PASSWORD
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-              value: "Editor"
+              value: "Viewer"
           volumeMounts:
             - name: datasources-volume
               mountPath: /etc/grafana/provisioning/datasources

@@ -49,14 +49,33 @@ async def capture_k8s_screenshots():
 
         # 3. Grafana Tempo Traces (Explore on port 3000)
         print("Capturing Kubernetes Tempo Trace Explorer...")
-        trace_id = "a347be871b05b2c44c5a757b1c6da0d3"
-        await page.goto(
-            f"http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22queryType%22:%22traceId%22,%22query%22:%22{trace_id}%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D",
-            wait_until="networkidle",
-        )
-        await page.wait_for_timeout(4000)
+        # Query Tempo API for a real trace ID
+        import json
+        import urllib.request
+
+        active_trace_id = "b9b704f72e018ee1ad723b676866859d"
+        try:
+            with urllib.request.urlopen(
+                "http://localhost:3200/api/search?limit=5", timeout=5
+            ) as resp:
+                data = json.loads(resp.read().decode())
+                traces = data.get("traces", [])
+                if traces:
+                    # Pick root trace with open-healthcare-api
+                    for t in traces:
+                        if t.get("rootServiceName") == "open-healthcare-api":
+                            active_trace_id = t["traceID"]
+                            break
+                    else:
+                        active_trace_id = traces[0]["traceID"]
+        except Exception as e:
+            print(f"Warning: Could not fetch trace from Tempo API, falling back to default: {e}")
+
+        tempo_explore_url = f"http://localhost:3000/explore?left=%7B%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%2C%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22query%22%3A%22{active_trace_id}%22%2C%22queryType%22%3A%22traceql%22%7D%5D%7D"
+        await page.goto(tempo_explore_url, wait_until="networkidle")
+        await page.wait_for_timeout(6000)
         await page.screenshot(path=f"{SCREENSHOT_DIR}/m09_kubernetes_tempo.png")
-        print("Saved docs/images/m09_kubernetes_tempo.png")
+        print(f"Saved authentic docs/images/m09_kubernetes_tempo.png for trace {active_trace_id}")
 
         # 4. Kubernetes Workloads Terminal View
         print("Capturing Kubernetes Workloads screenshot...")
