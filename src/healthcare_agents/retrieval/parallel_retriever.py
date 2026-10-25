@@ -183,17 +183,43 @@ def execute_parallel_retrieval(
                         keyword=kw, language=lang, limit=limit
                     )
                 )
-                # If compound query returned 0, try splitting on 'and'
-                if not candidates_found and " and " in kw:
-                    for sub_kw in kw.split(" and "):
+                # If initial query returned 0, try structured bounded consumer-health fallbacks
+                if not candidates_found:
+                    fallback_terms: list[str] = []
+                    # Check for compound conjunctions
+                    if " and " in kw:
+                        fallback_terms.extend(
+                            [sub.strip() for sub in kw.split(" and ") if sub.strip()]
+                        )
+
+                    kw_lower = kw.lower()
+                    # Domain-aware consumer vocabulary mapping
+                    if ("dent" in kw_lower or "tooth" in kw_lower or "teeth" in kw_lower) and (
+                        "child" in kw_lower or "pediatric" in kw_lower
+                    ):
+                        fallback_terms.extend(["child dental health", "dental care for children"])
+                    if "anxiety" in kw_lower or "fear" in kw_lower or "phobia" in kw_lower:
+                        fallback_terms.extend(["anxiety", "phobias"])
+                    if "decay" in kw_lower or "cavity" in kw_lower or "caries" in kw_lower:
+                        fallback_terms.extend(["tooth decay"])
+                    if "dent" in kw_lower or "tooth" in kw_lower or "teeth" in kw_lower:
+                        fallback_terms.extend(["dental health"])
+
+                    seen_terms = {kw.lower()}
+                    for sub_kw in fallback_terms:
+                        if sub_kw.lower() in seen_terms:
+                            continue
+                        seen_terms.add(sub_kw.lower())
                         recs = list(
                             patient_education_retriever.search_topics(
-                                keyword=sub_kw.strip(), language=lang, limit=limit
+                                keyword=sub_kw, language=lang, limit=limit
                             )
                         )
                         for r in recs:
                             if not any(x.official_url == r.official_url for x in candidates_found):
                                 candidates_found.append(r)
+                        if len(candidates_found) >= limit:
+                            break
 
             records = candidates_found[:limit]
         except Exception as exc:

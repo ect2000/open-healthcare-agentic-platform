@@ -60,3 +60,20 @@
     - Dependent CMS: `#78350f` (stroke: `#fbbf24`)
     - Evidence Processing & Validator: `#1e293b` (stroke: `#94a3b8`)
   - Guaranteed high contrast and readability across dark and light themes and varying viewports (1440px, 1280px, 768px).
+
+### 8. Patient Education Bounded Fallback & Educational Tier Classification
+- **Root Cause Analysis**:
+  - MedlinePlus Web Service API uses an exact multi-word index. When Gemma 4 synthesized complex academic queries like `"managing dental anxiety in children"`, the API returned 0 records because no topic by that exact multi-clause name exists in MedlinePlus.
+  - The system has authoritative consumer health topics covering this domain: `"child dental health"`, `"dental health"`, `"tooth decay"`, and `"anxiety"`.
+- **Bounded Fallback Execution**:
+  - Updated `run_medline_query` in `parallel_retriever.py`: If the primary keyword yields 0 items, bounded consumer-health fallback terms are queried based on detected domain entities (e.g. child dental health, tooth decay, anxiety/phobias).
+  - Preserves exact user inquiry; does not alter query text.
+- **Explainable Relevance Scoring**:
+  - Updated `assess_medlineplus_relevance` in `evidence/relevance.py`:
+    - Word-boundary matching to prevent incidental substring collisions (e.g., `'oral'` inside `'behavioral'`).
+    - Stopword filtering for conversational query prefixes (`'find'`, `'best'`, `'research'`).
+    - Clear distinction between **Directly relevant education** (e.g. `Child Dental Health`) and **Related general dental-health / anxiety education** (`Tooth Decay`, `Dental Health`, `Anxiety`).
+    - Strict exclusion guardrail for unrelated conditions (`scleroderma`, `sleep disorders`, `eating disorders`, `diabetes complications`).
+- **Regression Testing**:
+  - Added `test_parallel_retrieval_medlineplus_bounded_fallback` to `tests/test_parallel_retrieval.py`.
+  - Full suite passes: 162 passed, 15 skipped; total coverage 90.60%.

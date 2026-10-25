@@ -20,8 +20,8 @@
 | **Location & Near Me Handling** | Houston-area scope without demanding ZIP code | Houston extracted, no fabricated distances | **PASS** |
 | **Symptom-Aware Routing** | Tooth cavity routes to General Dentistry | Cavity context mapped to General Dentistry | **PASS** |
 | **Best-Match Ranking** | Objective completeness, no invented ratings/reviews | Verifiable completeness sorting verified | **PASS** |
-| **Test Suite** | Full pytest suite passes | **161 passed**, 15 skipped | **PASS** |
-| **Code Coverage** | Overall coverage $\ge 90\%$ | **90.66%** coverage confirmed | **PASS** |
+| **Test Suite** | Full pytest suite passes | **162 passed**, 15 skipped | **PASS** |
+| **Code Coverage** | Overall coverage $\ge 90\%$ | **90.60%** coverage confirmed | **PASS** |
 | **Linting & Formatting** | Ruff checks pass cleanly | All checks passed, 140 files formatted | **PASS** |
 | **Type Checking** | Mypy checks pass cleanly | Success: no issues in 70 source files | **PASS** |
 | **Package Build** | Python wheel and sdist build cleanly | `healthcare_agents-0.6.0` built | **PASS** |
@@ -31,6 +31,7 @@
 | **Sidebar Spacing Polish** | Remove blank gaps & duplicate dividers | Clean single border divider | **PASS** |
 | **Preset Search Sync** | Presets populate editable search input | Immediate session state sync on click | **PASS** |
 | **Mermaid Diagram Contrast** | High-contrast dark backgrounds, white text | Strong contrast across all nodes & edges | **PASS** |
+| **Patient Education Retrieval** | Consumer-health vocabulary fallback & relevance | Preset 2 returns Child Dental Health (1 topic) | **PASS** |
 
 ---
 

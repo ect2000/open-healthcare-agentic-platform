@@ -23,7 +23,8 @@ Authoritative Healthcare Sources:
    - Text: Scientific terminology, biomedical keywords.
 3. "MedlinePlus" (Authoritative Consumer Health Education):
    - Focus: Patient guidance, health literacy, overview topics, condition management.
-   - Text: Consumer health terms, condition names, coping guidance.
+   - Text: Concise consumer health terms (e.g., "child dental health", "tooth decay").
+   - DO NOT formulate long conversational sentences or multi-clause academic phrases.
 4. "CMS" (CMS Provider Data Catalog):
    - Focus: Facility or clinician quality measures. Dependent on candidate provider discovery.
 

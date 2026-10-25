@@ -170,3 +170,59 @@ def test_parallel_retrieval_with_topics_list() -> None:
         quality_retriever=FixtureQualityRetriever(),
     )
     assert len(results["patient_education_evidence"]) > 0
+
+
+def test_parallel_retrieval_medlineplus_bounded_fallback() -> None:
+    """Verify MedlinePlus executes bounded fallback when raw query string has 0 initial hits."""
+    from healthcare_agents.planning.fanout_schema import FanOutPlan, PlannedQuery
+    from healthcare_agents.retrieval.base import ClinicalEvidenceRecord
+
+    class FallbackMockEducationRetriever(FixturePatientEducationRetriever):
+        def search_topics(
+            self, keyword: str, language: str = "en", limit: int = 5
+        ) -> list[ClinicalEvidenceRecord]:
+            # Simulate real MedlinePlus: full phrase returns nothing, but canonical term returns hit
+            if keyword == "managing dental anxiety in children":
+                return []
+            if keyword == "child dental health":
+                return [
+                    ClinicalEvidenceRecord(
+                        record_id="mlp-child-dental",
+                        source="MedlinePlus",
+                        source_type="MedlinePlus",
+                        evidence_type="patient_education",
+                        title="Child Dental Health",
+                        summary=(
+                            "Healthy teeth are important for your child. "
+                            "Preventive care avoids decay."
+                        ),
+                        year=2026,
+                        official_url="https://medlineplus.gov/childdentalhealth.html",
+                        language="en",
+                    )
+                ]
+            return []
+
+    fanout = FanOutPlan(request_id="req-fallback-test", original_query="fallback test")
+    fanout.add_query(
+        PlannedQuery(
+            query_id="q-med-fallback",
+            parent_request_id="req-fallback-test",
+            source="MedlinePlus",
+            query_text="managing dental anxiety in children",
+            search_params={"keyword": "managing dental anxiety in children", "limit": 3},
+            intent_category="patient_education",
+            priority=2,
+        )
+    )
+
+    results = execute_parallel_retrieval(
+        fanout_plan=fanout,
+        provider_retriever=FixtureProviderRetriever(),
+        evidence_retriever=FixtureEvidenceRetriever(),
+        patient_education_retriever=FallbackMockEducationRetriever(),
+        quality_retriever=FixtureQualityRetriever(),
+    )
+
+    assert len(results["patient_education_evidence"]) == 1
+    assert results["patient_education_evidence"][0].title == "Child Dental Health"
