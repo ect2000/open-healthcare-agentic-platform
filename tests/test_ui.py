@@ -274,7 +274,12 @@ def test_streamlit_app_test_initialization(sample_search_response: SearchRespons
                 details={},
             )
 
-            at = AppTest.from_file("../src/healthcare_agents/ui/app.py", default_timeout=15.0)
+            import inspect
+
+            import healthcare_agents.ui.app as ui_app_module
+
+            script_path = inspect.getfile(ui_app_module)
+            at = AppTest.from_file(script_path, default_timeout=15.0)
             at.run()
             assert not at.exception
             # Verify buttons exist in sidebar
@@ -307,7 +312,12 @@ def test_streamlit_app_test_search_flow(sample_search_response: SearchResponse) 
         )
         mock_s.return_value = sample_search_response
 
-        at = AppTest.from_file("../src/healthcare_agents/ui/app.py", default_timeout=15.0)
+        import inspect
+
+        import healthcare_agents.ui.app as ui_app_module
+
+        script_path = inspect.getfile(ui_app_module)
+        at = AppTest.from_file(script_path, default_timeout=15.0)
         at.run()
         # Find search button inside form and click
         if len(at.button) > 0:
