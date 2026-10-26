@@ -7,8 +7,8 @@ This document describes deployment options for the Open Healthcare Agentic Platf
 ## 1. Container Architecture
 
 The platform provides multi-arch container images (`linux/amd64`, `linux/arm64`) published to GitHub Container Registry (GHCR):
-- `ghcr.io/hastimal/open-healthcare-api:0.10.1`: FastAPI backend and multi-agent core.
-- `ghcr.io/hastimal/open-healthcare-ui:0.10.1`: Streamlit web interface.
+- `ghcr.io/hastimal/open-healthcare-api:0.10.2`: FastAPI backend and multi-agent core.
+- `ghcr.io/hastimal/open-healthcare-ui:0.10.2`: Streamlit web interface.
 
 Images run as unprivileged non-root users (`appuser:10001`) with read-only root filesystems where applicable.
 

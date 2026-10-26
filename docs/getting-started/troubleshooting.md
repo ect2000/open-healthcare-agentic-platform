@@ -79,8 +79,8 @@ kubectl get pods -n open-healthcare
    ```
 2. If using local Kind cluster without internet pull access:
    ```bash
-   kind load docker-image ghcr.io/hastimal/open-healthcare-api:0.10.1 --name open-healthcare
-   kind load docker-image ghcr.io/hastimal/open-healthcare-ui:0.10.1 --name open-healthcare
+   kind load docker-image ghcr.io/hastimal/open-healthcare-api:0.10.2 --name open-healthcare
+   kind load docker-image ghcr.io/hastimal/open-healthcare-ui:0.10.2 --name open-healthcare
    ```
 
 ---

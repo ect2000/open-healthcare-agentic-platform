@@ -145,7 +145,7 @@ Select the pathway suited for your workflow:
 | **PyPI / uvx** | Developers, Analysts | `uvx --from open-healthcare-agentic-platform healthcare-agents start` | [Installation Guide](docs/getting-started/installation.md#pathway-a-one-command-zero-install-pypi--uvx) |
 | **Docker Compose** | Engineers, Observers | `docker compose up -d` | [Installation Guide](docs/getting-started/installation.md#pathway-b-docker-compose-deployment) |
 | **Kubernetes / Kind** | Platform Engineers | `python scripts/k8s_deploy.py` | [Installation Guide](docs/getting-started/installation.md#pathway-c-local-kubernetes-kind) |
-| **Helm OCI** | Cloud Deployments | `helm install healthcare oci://ghcr.io/hastimal/charts/open-healthcare --version 0.10.1` | [Installation Guide](docs/getting-started/installation.md#pathway-d-helm-oci-chart-installation) |
+| **Helm OCI** | Cloud Deployments | `helm install healthcare oci://ghcr.io/hastimal/charts/open-healthcare --version 0.10.2` | [Installation Guide](docs/getting-started/installation.md#pathway-d-helm-oci-chart-installation) |
 
 ---
 
