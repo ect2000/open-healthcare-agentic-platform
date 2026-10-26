@@ -61,7 +61,7 @@ Post-release audit and user testing identified two non-functional polish issues 
 - **Verification:** Fresh wheel installation in a clean outside virtual environment reports:
   ```text
   $ healthcare-agents --version
-  healthcare-agents 0.10.0
+  healthcare-agents 0.10.1
   ```
 
 ### Phase 5: GHCR Public Access Verification
@@ -72,6 +72,11 @@ Direct unauthenticated anonymous token exchanges against `ghcr.io` confirmed:
 3. `oci://ghcr.io/hastimal/charts/open-healthcare:0.10.0` $\rightarrow$ `HTTP 200` (Public OCI Helm Chart Manifest)
 
 No authentication credentials were used, confirming that all three GHCR packages are publicly accessible without authentication.
+Furthermore, checked `0.10.1` tags across PyPI and GHCR to confirm no conflicting artifacts exist:
+- PyPI `0.10.1`: `HTTP 404` (not yet published)
+- GHCR `open-healthcare-api:0.10.1`: `HTTP 404` (not yet published)
+- GHCR `open-healthcare-ui:0.10.1`: `HTTP 404` (not yet published)
+- GHCR `charts/open-healthcare:0.10.1`: `HTTP 404` (not yet published)
 
 ---
 
@@ -84,32 +89,50 @@ No authentication credentials were used, confirming that all three GHCR packages
 
 ### Test Results Summary
 - **Ruff Lint:** `uv run ruff check .` $\rightarrow$ `All checks passed!`
-- **Ruff Format:** `uv run ruff format --check .` $\rightarrow$ `177 files already formatted`
+- **Ruff Format:** `uv run ruff format --check .` $\rightarrow$ `178 files already formatted`
 - **Mypy Type Check:** `uv run mypy src tests` $\rightarrow$ `Success: no issues found in 82 source files`
-- **Unit & Integration Tests:** `uv run pytest -m "not live"` $\rightarrow$ `206 passed, 15 skipped, 1 deselected, 1 warning in 106s`
+- **Unit & Integration Tests:** `uv run pytest -m "not live"` $\rightarrow$ `206 passed, 15 skipped, 1 deselected, 1 warning in 118s`
 - **Code Coverage:** **90.16%** ($\ge 90.0\%$ threshold maintained)
 - **Helm Lint:** `helm lint charts/open-healthcare` $\rightarrow$ `0 chart(s) failed`
-- **Helm Template:** `helm template test charts/open-healthcare` $\rightarrow$ Valid Kubernetes manifest output
+- **Helm Template:** `helm template test charts/open-healthcare` $\rightarrow$ Valid Kubernetes manifests referencing `0.10.1` images
 - **Release Tag Mapping:** `tests/test_release_tag_mapping.py` $\rightarrow$ 3 passed (verified `v0.10.0-m10` $\rightarrow$ `0.10.0` and `v0.10.1-m10.1` $\rightarrow$ `0.10.1`)
-- **Package Metadata:** `python -m twine check dist/*` $\rightarrow$ `PASSED` for both wheel and sdist
+- **Package Metadata:** `twine check dist/*` $\rightarrow$ `PASSED` for both wheel and sdist
 
 ---
 
-## 4. Proposed Patch Version Strategy
+## 4. Release Safety & Workflow Triggers
 
-- **Target Version:** `0.10.1`
-- **Target Tag:** `v0.10.1-m10.1`
-- **Workflow Compatibility:**
-  - `.github/workflows/publish-containers.yml`: Regex patterns extract `0.10.1` and `0.10` from `v0.10.1-m10.1`.
-  - `.github/workflows/publish-helm-chart.yml`: Extracts `0.10.1` from `v0.10.1-m10.1` and matches against `Chart.yaml` version.
-  - `.github/workflows/publish-pypi.yml`: Builds package and publishes to PyPI using Trusted Publishing.
+All three publishing workflows trigger automatically upon `release: [published]`:
+1. `.github/workflows/publish-pypi.yml`: Builds package and publishes to PyPI using OIDC Trusted Publishing.
+2. `.github/workflows/publish-containers.yml`: Builds multi-arch AMD64/ARM64 container images and pushes `0.10.1` & `0.10` tags to GHCR.
+3. `.github/workflows/publish-helm-chart.yml`: Packages chart version `0.10.1` and pushes OCI artifact to `oci://ghcr.io/hastimal/charts/open-healthcare:0.10.1`.
+
+### Failure Recovery Procedures
+
+1. **PyPI Publication Failure:**
+   - Check GitHub environment `pypi` logs.
+   - If network glitch occurs, trigger manually via `workflow_dispatch` (`publish=true`) after addressing the transient failure.
+   - If version `0.10.1` was already partially uploaded, PyPI forbids re-uploading the same version; bump to `0.10.2`.
+2. **GHCR Container Publication Failure:**
+   - Inspect GitHub Actions job logs for buildx or Trivy errors.
+   - Re-run the failed workflow directly or via `workflow_dispatch` (`publish=true`).
+3. **Helm OCI Publication Failure:**
+   - Check if GHCR authentication or tag alignment failed.
+   - Fix any discrepancy and trigger the pipeline via `workflow_dispatch` (`publish=true`).
+4. **Private GHCR Package Recovery:**
+   - If GHCR packages revert to private visibility, navigate to GitHub Profile $\rightarrow$ Packages $\rightarrow$ `Package Settings` $\rightarrow$ `Danger Zone` $\rightarrow$ `Change visibility` $\rightarrow$ `Public`.
 
 ---
 
 ## 5. Next Steps for Release (Upon Approval)
 
-1. Review and merge the pull request into `main`.
-2. In a follow-up release action:
-   - Bump version to `0.10.1` in `pyproject.toml` and `Chart.yaml`.
-   - Create annotated tag `v0.10.1-m10.1`.
-   - Publish GitHub Release `v0.10.1-m10.1` triggering PyPI, GHCR containers, and Helm OCI publish workflows.
+1. Review and merge PR targeting `main`.
+2. Create annotated tag:
+   ```bash
+   git checkout main && git pull origin main
+   git tag -a v0.10.1-m10.1 -m "Release v0.10.1-m10.1: Fix broken PyPI README images and CLI version reporting"
+   git push origin v0.10.1-m10.1
+   ```
+3. Publish GitHub Release `v0.10.1-m10.1` pointing to `v0.10.1-m10.1`.
+4. Monitor and verify all three automated publishing pipelines (PyPI, GHCR containers, Helm OCI).
+

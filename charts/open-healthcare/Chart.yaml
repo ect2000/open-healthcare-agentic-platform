@@ -2,8 +2,8 @@ apiVersion: v2
 name: open-healthcare
 description: A production-ready, vendor-neutral Helm chart for the Open Healthcare Agentic Platform
 type: application
-version: 0.10.0
-appVersion: "0.10.0"
+version: 0.10.1
+appVersion: "0.10.1"
 keywords:
   - healthcare
   - ai
