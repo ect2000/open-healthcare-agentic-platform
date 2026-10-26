@@ -19,7 +19,6 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 env:
   OCI_REGISTRY: ghcr.io
@@ -85,6 +84,18 @@ jobs:
         run: |
           SHOULD_PUBLISH="false"
           if [ "${{ github.event_name }}" = "release" ]; then
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+            CHART_VERSION=$(helm show chart ${{ env.CHART_DIR }} | grep '^version:' | awk '{print $2}')
+            # Clean possible 'v' prefix from tag for comparison
+            CLEAN_TAG="${RELEASE_TAG#v}"
+            # Extract SemVer portion if tag is e.g. v0.10.0-m10
+            TAG_SEMVER=$(echo "$CLEAN_TAG" | awk -F'-' '{print $1}')
+
+            echo "Evaluating Release Tag: $RELEASE_TAG (Cleaned: $CLEAN_TAG, SemVer: $TAG_SEMVER) against Chart Version: $CHART_VERSION"
+            if [ "$CLEAN_TAG" != "$CHART_VERSION" ] && [ "$TAG_SEMVER" != "$CHART_VERSION" ]; then
+              echo "❌ Error: Release tag ($RELEASE_TAG) does not align with Chart.yaml version ($CHART_VERSION)"
+              exit 1
+            fi
             SHOULD_PUBLISH="true"
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" = "true" ]; then
             SHOULD_PUBLISH="true"
