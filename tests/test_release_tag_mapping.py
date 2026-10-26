@@ -17,23 +17,25 @@ def test_milestone_tag_mapping() -> None:
     """Verify v0.10.0-m10 maps to 0.10.0."""
     assert extract_semver_from_tag("v0.10.0-m10") == "0.10.0"
     assert extract_semver_from_tag("v0.10.1-m10.1") == "0.10.1"
+    assert extract_semver_from_tag("v0.10.2-m10.2") == "0.10.2"
     assert extract_semver_from_tag("v0.9.0-m09") == "0.9.0"
     assert extract_semver_from_tag("0.10.0") == "0.10.0"
     assert extract_semver_from_tag("0.10.1") == "0.10.1"
+    assert extract_semver_from_tag("0.10.2") == "0.10.2"
 
 
 def test_chart_and_package_version_alignment() -> None:
-    """Verify Chart.yaml and pyproject.toml versions align with 0.10.0."""
+    """Verify Chart.yaml and pyproject.toml versions align with 0.10.2."""
     import pathlib
 
     repo_root = pathlib.Path(__file__).parent.parent
 
     pyproject_text = (repo_root / "pyproject.toml").read_text()
-    assert 'version = "0.10.1"' in pyproject_text
+    assert 'version = "0.10.2"' in pyproject_text
 
     chart_text = (repo_root / "charts" / "open-healthcare" / "Chart.yaml").read_text()
-    assert "version: 0.10.1" in chart_text
-    assert 'appVersion: "0.10.1"' in chart_text
+    assert "version: 0.10.2" in chart_text
+    assert 'appVersion: "0.10.2"' in chart_text
 
 
 def test_helm_image_references_match_ghcr() -> None:

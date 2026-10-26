@@ -129,7 +129,7 @@ Deploy to any Kubernetes cluster using the official OCI artifact published to Gi
 ### 1. Install Chart from GHCR OCI
 ```bash
 helm install healthcare oci://ghcr.io/hastimal/charts/open-healthcare \
-  --version 0.10.1 \
+  --version 0.10.2 \
   --namespace healthcare \
   --create-namespace
 ```
@@ -144,7 +144,7 @@ kubectl get all -n healthcare
 Custom values can be passed during install:
 ```bash
 helm install healthcare oci://ghcr.io/hastimal/charts/open-healthcare \
-  --version 0.10.1 \
+  --version 0.10.2 \
   --namespace healthcare \
   --set api.replicaCount=2 \
   --set observability.enabled=true

@@ -47,7 +47,7 @@ docker compose up -d
 ### Option 3: Kubernetes via Helm OCI
 ```bash
 helm install healthcare oci://ghcr.io/hastimal/charts/open-healthcare \
-  --version 0.10.1 \
+  --version 0.10.2 \
   --namespace healthcare \
   --create-namespace
 ```
