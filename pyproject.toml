@@ -98,6 +98,9 @@ warn_unused_ignores = true
 minversion = "8.0"
 testpaths = ["tests"]
 addopts = "-ra -q --cov=healthcare_agents --cov-report=term-missing"
+markers = [
+    "live: marks tests that require live external network or services",
+]
 
 [tool.coverage.run]
 source = ["src/healthcare_agents"]

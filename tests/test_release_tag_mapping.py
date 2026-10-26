@@ -16,8 +16,10 @@ def extract_semver_from_tag(tag: str) -> str:
 def test_milestone_tag_mapping() -> None:
     """Verify v0.10.0-m10 maps to 0.10.0."""
     assert extract_semver_from_tag("v0.10.0-m10") == "0.10.0"
+    assert extract_semver_from_tag("v0.10.1-m10.1") == "0.10.1"
     assert extract_semver_from_tag("v0.9.0-m09") == "0.9.0"
     assert extract_semver_from_tag("0.10.0") == "0.10.0"
+    assert extract_semver_from_tag("0.10.1") == "0.10.1"
 
 
 def test_chart_and_package_version_alignment() -> None:

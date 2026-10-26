@@ -30,7 +30,9 @@ class ObservabilityConfig:
         enabled = raw_enabled in ("true", "1", "yes", "on")
 
         service_name = source.get("OTEL_SERVICE_NAME", "open-healthcare-api").strip()
-        service_version = source.get("OTEL_SERVICE_VERSION", "0.6.0").strip()
+        from healthcare_agents import __version__
+
+        service_version = source.get("OTEL_SERVICE_VERSION", __version__).strip()
 
         # Parse resource attributes for environment if provided
         resource_attrs_raw = source.get("OTEL_RESOURCE_ATTRIBUTES", "")
