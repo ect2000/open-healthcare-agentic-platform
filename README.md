@@ -249,12 +249,26 @@ The foundational multi-agent orchestration architecture coordinates planning, de
 
 ## 6. Local Developer Setup & Installation
 
-### Requirements
-- Python 3.12 or newer
-- Git
-- Ollama with `gemma4:e2b` installed
+### Option A: One-Command Zero-Install (PyPI CLI Launcher)
 
-### Installation
+Run the platform without cloning the repository or setting up virtual environments:
+
+```bash
+# Direct zero-install execution (Available after M10 public release)
+uvx open-healthcare-agentic-platform
+
+# Or install globally via pip / uv:
+pip install open-healthcare-agentic-platform
+healthcare-agents check
+healthcare-agents start
+```
+
+> **Availability Note**:
+> - **Available Now**: Local wheel installation (`pip install dist/open_healthcare_agentic_platform-0.10.0-py3-none-any.whl`) or source install (`pip install -e .`).
+> - **Available After M10 Release**: Public PyPI distribution (`uvx open-healthcare-agentic-platform`).
+
+### Option B: Clone from Source
+
 Clone the repository and set up a virtual environment:
 
 ```bash
@@ -283,6 +297,24 @@ Verify the installed CLI tool and run multi-agent discovery:
 # Check version
 healthcare-agents --version
 
+# Run local diagnostic preflight checks (Python, Ports, Ollama, Gemma 4, Docker)
+healthcare-agents check
+
+# Start platform in Native mode (FastAPI + Streamlit UI with auto-ready polling)
+healthcare-agents start
+
+# Start with custom ports or backend endpoint
+healthcare-agents start --api-port 9000 --ui-port 9501 --inference-url http://localhost:11434 --no-browser
+
+# Stop managed platform services
+healthcare-agents stop
+
+# Inspect service and PID status
+healthcare-agents status
+
+# Run interactive demonstration launcher
+healthcare-agents demo
+
 # Check configuration health status
 healthcare-agents health
 
@@ -297,6 +329,9 @@ healthcare-agents search --query "Find pediatric dentists in Houston" --verbose
 
 # Launch FastAPI REST Service (Port 8000)
 healthcare-agents serve --host 127.0.0.1 --port 8000
+
+# Launch Streamlit Frontend (Port 8501)
+healthcare-agents ui --port 8501
 
 # Launch Streamlit Web Application (Port 8501)
 healthcare-agents ui --port 8501

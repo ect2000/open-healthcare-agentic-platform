@@ -121,16 +121,117 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable auto-reload for development.",
     )
 
-    # healthcare-agents ui command (Milestone M5 - Streamlit)
+    # healthcare-agents ui command (Milestone M6 - Streamlit UI)
     ui_parser = subparsers.add_parser(
         "ui",
-        help="Run the Streamlit web application.",
+        help="Run the Streamlit frontend UI.",
     )
     ui_parser.add_argument(
         "--port",
         type=int,
         default=8501,
-        help="Port to bind Streamlit to (default: 8501).",
+        help="Port to bind UI to (default: 8501).",
+    )
+
+    # healthcare-agents check command (Milestone M10)
+    check_parser = subparsers.add_parser(
+        "check",
+        help="Validate local prerequisites (Python, Ports, Ollama, Gemma 4).",
+    )
+    check_parser.add_argument(
+        "--inference-url",
+        default="http://localhost:11434",
+        help="Inference base URL (default: http://localhost:11434).",
+    )
+    check_parser.add_argument(
+        "--model",
+        default="gemma4:e2b",
+        help="Model name to verify (default: gemma4:e2b).",
+    )
+    check_parser.add_argument(
+        "--api-port",
+        type=int,
+        default=8000,
+        help="Port for FastAPI backend (default: 8000).",
+    )
+    check_parser.add_argument(
+        "--ui-port",
+        type=int,
+        default=8501,
+        help="Port for Streamlit frontend (default: 8501).",
+    )
+
+    # healthcare-agents start / run command (Milestone M10)
+    start_parser = subparsers.add_parser(
+        "start",
+        aliases=["run"],
+        help="Start the Open Healthcare Agentic Platform services.",
+    )
+    start_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host address for FastAPI server (default: 127.0.0.1).",
+    )
+    start_parser.add_argument(
+        "--api-port",
+        type=int,
+        default=8000,
+        help="Port for FastAPI backend (default: 8000).",
+    )
+    start_parser.add_argument(
+        "--ui-port",
+        type=int,
+        default=8501,
+        help="Port for Streamlit UI (default: 8501).",
+    )
+    start_parser.add_argument(
+        "--inference-url",
+        default="http://localhost:11434",
+        help="Ollama or inference server URL (default: http://localhost:11434).",
+    )
+    start_parser.add_argument(
+        "--model",
+        default="gemma4:e2b",
+        help="Model identifier (default: gemma4:e2b).",
+    )
+    start_parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not open browser automatically upon startup.",
+    )
+
+    # healthcare-agents stop command (Milestone M10)
+    subparsers.add_parser(
+        "stop",
+        help="Stop managed CLI service instances.",
+    )
+
+    # healthcare-agents demo command (Milestone M10)
+    demo_parser = subparsers.add_parser(
+        "demo",
+        help="Run interactive demonstration launcher.",
+    )
+    demo_parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not open browser automatically.",
+    )
+
+    # Global options on root parser for uvx one-command execution
+    parser.add_argument(
+        "--inference-url",
+        default="http://localhost:11434",
+        help="Inference base URL (for default launch mode).",
+    )
+    parser.add_argument(
+        "--model",
+        default="gemma4:e2b",
+        help="Model name (for default launch mode).",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not open browser automatically (for default launch mode).",
     )
 
     return parser
@@ -484,13 +585,132 @@ def handle_ui(port: int = 8501) -> int:
         return 1
 
 
+def handle_check(
+    inference_url: str = "http://localhost:11434",
+    model_name: str = "gemma4:e2b",
+    api_port: int = 8000,
+    ui_port: int = 8501,
+) -> int:
+    """Run local environment preflight checks and output actionable guidance."""
+    from healthcare_agents.launcher import run_prerequisite_checks
+
+    sys.stdout.write("==================================================================\n")
+    sys.stdout.write("🔍 Open Healthcare Agentic Platform — Environment Check\n")
+    sys.stdout.write("==================================================================\n")
+    results = run_prerequisite_checks(
+        inference_url=inference_url,
+        model_name=model_name,
+        api_port=api_port,
+        ui_port=ui_port,
+    )
+    all_ok = True
+    for res in results:
+        symbol = "✅" if res.status else "❌"
+        sys.stdout.write(f"{symbol} {res.name}: {res.message}\n")
+        if not res.status and res.remediation:
+            sys.stdout.write(f"   💡 Remediation: {res.remediation}\n")
+            if "Optional" not in res.name:
+                all_ok = False
+
+    sys.stdout.write("==================================================================\n")
+    if all_ok:
+        sys.stdout.write("🎉 All system prerequisites satisfied! You can start the platform.\n")
+        return 0
+    else:
+        sys.stderr.write("⚠️ Some required dependencies are missing. See remediations above.\n")
+        return 1
+
+
+def handle_start(
+    host: str = "127.0.0.1",
+    api_port: int = 8000,
+    ui_port: int = 8501,
+    inference_url: str = "http://localhost:11434",
+    model_name: str = "gemma4:e2b",
+    open_browser: bool = True,
+) -> int:
+    """Run prerequisite checks and start platform in Native mode."""
+    from healthcare_agents.launcher import run_prerequisite_checks, start_native_services
+
+    results = run_prerequisite_checks(
+        inference_url=inference_url,
+        model_name=model_name,
+        api_port=api_port,
+        ui_port=ui_port,
+    )
+
+    critical_failures = [
+        r for r in results if not r.status and "Optional" not in r.name and "Port" in r.name
+    ]
+    if critical_failures:
+        for r in critical_failures:
+            sys.stderr.write(f"❌ Cannot start: {r.message}. {r.remediation}\n")
+        return 1
+
+    return start_native_services(
+        api_host=host,
+        api_port=api_port,
+        ui_port=ui_port,
+        inference_url=inference_url,
+        model_name=model_name,
+        open_browser=open_browser,
+    )
+
+
+def handle_stop() -> int:
+    """Stop active platform processes managed by this CLI."""
+    from healthcare_agents.launcher import stop_native_services
+
+    return stop_native_services()
+
+
+def handle_demo(no_browser: bool = False) -> int:
+    """Execute the interactive demonstration workflow."""
+    from healthcare_agents.launcher import run_prerequisite_checks, start_native_services
+
+    # Preflight check
+    run_prerequisite_checks()
+    return start_native_services(open_browser=not no_browser)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    if args.command == "check":
+        return handle_check(
+            inference_url=getattr(args, "inference_url", "http://localhost:11434"),
+            model_name=getattr(args, "model", "gemma4:e2b"),
+            api_port=getattr(args, "api_port", 8000),
+            ui_port=getattr(args, "ui_port", 8501),
+        )
+
+    if args.command in ("start", "run"):
+        return handle_start(
+            host=getattr(args, "host", "127.0.0.1"),
+            api_port=getattr(args, "api_port", 8000),
+            ui_port=getattr(args, "ui_port", 8501),
+            inference_url=getattr(args, "inference_url", "http://localhost:11434"),
+            model_name=getattr(args, "model", "gemma4:e2b"),
+            open_browser=not getattr(args, "no_browser", False),
+        )
+
+    if args.command == "stop":
+        return handle_stop()
+
+    if args.command == "demo":
+        return handle_demo(no_browser=getattr(args, "no_browser", False))
+
     if args.command in ("health", "status"):
-        return handle_health(verbose=getattr(args, "verbose", False))
+        from healthcare_agents.launcher import get_runtime_status
+
+        code = handle_health(verbose=getattr(args, "verbose", False))
+        rt_status = get_runtime_status()
+        sys.stdout.write(f"Runtime Services: API {rt_status['api']} | UI {rt_status['ui']}\n")
+        if "managed_pids" in rt_status:
+            sys.stdout.write(f"Managed Processes: {rt_status['managed_pids']}\n")
+        return code
 
     if args.command == "model":
         if args.model_command == "status":
@@ -520,6 +740,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "ui":
         return handle_ui(
             port=getattr(args, "port", 8501),
+        )
+
+    # Default action when invoked with no command (e.g. uvx open-healthcare-agentic-platform):
+    if args.command is None:
+        # Bare invocation defaults to starting the platform
+        sys.stdout.write(
+            "Starting Open Healthcare Agentic Platform via default one-command launcher...\n"
+        )
+        return handle_start(
+            inference_url=getattr(args, "inference_url", "http://localhost:11434"),
+            model_name=getattr(args, "model", "gemma4:e2b"),
+            open_browser=not getattr(args, "no_browser", False),
         )
 
     parser.print_help()
