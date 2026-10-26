@@ -21,7 +21,8 @@ This directory maintains the historical documentation, execution records, implem
 | [M06-1-ui-observability](./M06-1-ui-observability/) | `feature/m06-1-ui-observability` | UI Experience, Patient Education Formatting & Agent Execution Observability | Verified |
 | [M07-parallel-query-fanout](./M07-parallel-query-fanout/) | `v0.7.0-m07` | Intelligent Query Fan-Out, Parallel Retrieval, Relevance & Workflow Graph | Complete |
 | [M08-observability](./M08-observability/) | `v0.8.0-m08` | OpenTelemetry SDK, OTel Collector, Prometheus, Tempo & Grafana Dashboards | Complete |
-| [M09-kubernetes](./M09-kubernetes/) | `v0.9.0-m09` | Kubernetes-Native Deployment, Kustomize, Kind Cluster & Observability | Verified (In Progress) |
+| [M09-kubernetes](./M09-kubernetes/) | `v0.9.0-m09` | Kubernetes-Native Deployment, Kustomize, Kind Cluster & Observability | Complete |
+| [M10-distribution](./M10-distribution/) | `v0.10.0-m10` | Helm, Packaging & One-Command Distribution (GHCR, Helm, PyPI CLI) | In Progress |
 
 ---
 

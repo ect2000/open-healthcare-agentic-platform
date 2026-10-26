@@ -45,12 +45,23 @@ def test_cli_health_verbose(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Ollama URL: http://localhost:11434" in captured.out
 
 
-def test_cli_help_when_no_args(capsys: pytest.CaptureFixture[str]) -> None:
-    """Verify CLI prints help when no subcommand provided."""
-    exit_code = main([])
-    assert exit_code == 0
+def test_cli_help_flag(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify CLI prints help when --help flag is provided."""
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--help"])
+    assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "usage: healthcare-agents" in captured.out or "Available subcommands" in captured.out
+    assert "usage: healthcare-agents" in captured.out
+    assert "check" in captured.out
+    assert "start" in captured.out
+
+
+def test_cli_default_one_command_invocation() -> None:
+    """Verify bare CLI invocation triggers default launcher."""
+    with patch("healthcare_agents.cli.handle_start", return_value=0) as mock_start:
+        exit_code = main([])
+        assert exit_code == 0
+        assert mock_start.called
 
 
 def test_cli_health_configuration_error(capsys: pytest.CaptureFixture[str]) -> None:
@@ -76,3 +87,113 @@ def test_cli_ui_subcommand() -> None:
         exit_code = main(["ui", "--port", "8501"])
         assert exit_code == 0
         assert mock_sub.called
+
+
+def test_cli_check_subcommand() -> None:
+    """Verify check subcommand invokes handle_check."""
+    with patch("healthcare_agents.cli.handle_check", return_value=0) as mock_chk:
+        exit_code = main(["check", "--api-port", "9000", "--ui-port", "9501"])
+        assert exit_code == 0
+        assert mock_chk.called
+
+
+def test_cli_start_subcommand() -> None:
+    """Verify start subcommand invokes handle_start."""
+    with patch("healthcare_agents.cli.handle_start", return_value=0) as mock_start:
+        exit_code = main(["start", "--no-browser"])
+        assert exit_code == 0
+        assert mock_start.called
+
+
+def test_cli_stop_subcommand() -> None:
+    """Verify stop subcommand invokes handle_stop."""
+    with patch("healthcare_agents.cli.handle_stop", return_value=0) as mock_stop:
+        exit_code = main(["stop"])
+        assert exit_code == 0
+        assert mock_stop.called
+
+
+def test_cli_demo_subcommand() -> None:
+    """Verify demo subcommand invokes handle_demo."""
+    with patch("healthcare_agents.cli.handle_demo", return_value=0) as mock_demo:
+        exit_code = main(["demo", "--no-browser"])
+        assert exit_code == 0
+        assert mock_demo.called
+
+
+def test_handle_check_all_ok(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify handle_check outputs status and returns 0 when checks pass."""
+    from healthcare_agents.cli import handle_check
+    from healthcare_agents.launcher import CheckResult
+
+    mock_res = [
+        CheckResult("Python Version", True, "Python 3.12.0", ""),
+        CheckResult("Port 8000 (FastAPI)", True, "Available", ""),
+        CheckResult("Port 8501 (Streamlit)", True, "Available", ""),
+        CheckResult("Inference Endpoint (Ollama)", True, "Reachable", ""),
+        CheckResult("Model 'gemma4:e2b'", True, "Found", ""),
+    ]
+    with patch("healthcare_agents.launcher.run_prerequisite_checks", return_value=mock_res):
+        code = handle_check()
+        assert code == 0
+        captured = capsys.readouterr()
+        assert "All system prerequisites satisfied!" in captured.out
+
+
+def test_handle_check_failure(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify handle_check returns 1 on critical failure."""
+    from healthcare_agents.cli import handle_check
+    from healthcare_agents.launcher import CheckResult
+
+    mock_res = [
+        CheckResult("Port 8000 (FastAPI)", False, "Busy", "Free port"),
+    ]
+    with patch("healthcare_agents.launcher.run_prerequisite_checks", return_value=mock_res):
+        code = handle_check()
+        assert code == 1
+        captured = capsys.readouterr()
+        assert "Remediation: Free port" in captured.out
+
+
+def test_handle_start_success() -> None:
+    """Verify handle_start delegates to start_native_services when checks pass."""
+    from healthcare_agents.cli import handle_start
+    from healthcare_agents.launcher import CheckResult
+
+    mock_res = [CheckResult("Port 8000 (FastAPI)", True, "Available", "")]
+    with (
+        patch("healthcare_agents.launcher.run_prerequisite_checks", return_value=mock_res),
+        patch("healthcare_agents.launcher.start_native_services", return_value=0) as mock_start,
+    ):
+        code = handle_start()
+        assert code == 0
+        assert mock_start.called
+
+
+def test_handle_start_failure_on_port_conflict(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify handle_start refuses to start if ports are occupied."""
+    from healthcare_agents.cli import handle_start
+    from healthcare_agents.launcher import CheckResult
+
+    mock_res = [CheckResult("Port 8000 (FastAPI)", False, "Port busy", "Change port")]
+    with patch("healthcare_agents.launcher.run_prerequisite_checks", return_value=mock_res):
+        code = handle_start()
+        assert code == 1
+        captured = capsys.readouterr()
+        assert "Cannot start: Port busy" in captured.err
+
+
+def test_handle_stop_and_demo() -> None:
+    """Verify handle_stop and handle_demo delegate to launcher functions."""
+    from healthcare_agents.cli import handle_demo, handle_stop
+
+    with patch("healthcare_agents.launcher.stop_native_services", return_value=0) as mock_stop:
+        assert handle_stop() == 0
+        assert mock_stop.called
+
+    with (
+        patch("healthcare_agents.launcher.run_prerequisite_checks"),
+        patch("healthcare_agents.launcher.start_native_services", return_value=0) as mock_start,
+    ):
+        assert handle_demo(no_browser=True) == 0
+        assert mock_start.called
