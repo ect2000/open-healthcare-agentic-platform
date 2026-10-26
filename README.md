@@ -267,7 +267,23 @@ healthcare-agents start
 > - **Available Now**: Local wheel installation (`pip install dist/open_healthcare_agentic_platform-0.10.0-py3-none-any.whl`) or source install (`pip install -e .`).
 > - **Available After M10 Release**: Public PyPI distribution (`uvx open-healthcare-agentic-platform`).
 
-### Option B: Clone from Source
+### Option B: Cloud-Native Kubernetes (Helm OCI Artifact)
+
+Install directly to Kubernetes via the official OCI Helm registry:
+
+```bash
+# Available after M10 public release
+helm install healthcare oci://ghcr.io/hastimal/charts/open-healthcare \
+  --version 0.10.0 \
+  --namespace healthcare \
+  --create-namespace
+```
+
+> **Availability Note**:
+> - **Available Now**: Local chart installation (`helm install healthcare charts/open-healthcare`).
+> - **Available After M10 Release**: OCI registry installation from GHCR.
+
+### Option C: Clone from Source
 
 Clone the repository and set up a virtual environment:
 
