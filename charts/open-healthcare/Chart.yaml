@@ -1,0 +1,20 @@
+apiVersion: v2
+name: open-healthcare
+description: A production-ready, vendor-neutral Helm chart for the Open Healthcare Agentic Platform
+type: application
+version: 0.10.0
+appVersion: "0.10.0"
+keywords:
+  - healthcare
+  - ai
+  - agentic-ai
+  - multi-agent
+  - opentelemetry
+  - gemma
+  - langgraph
+home: https://github.com/hastimal/open-healthcare-agentic-platform
+sources:
+  - https://github.com/hastimal/open-healthcare-agentic-platform
+maintainers:
+  - name: hastimal
+    url: https://github.com/hastimal

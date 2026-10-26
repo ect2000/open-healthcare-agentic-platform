@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+data:
+  HEALTHCARE_AGENTS_ENV: "production"
+  HEALTHCARE_AGENTS_LOG_LEVEL: "INFO"
+  MODEL_PROVIDER: {{ .Values.inference.modelProvider | quote }}
+  MODEL_NAME: {{ .Values.inference.modelName | quote }}
+  {{- if eq .Values.inference.mode "local-ollama" }}
+  OLLAMA_BASE_URL: "http://{{ include "open-healthcare.fullname" . }}-ollama-bridge:11434"
+  {{- else if .Values.inference.baseUrl }}
+  OLLAMA_BASE_URL: {{ .Values.inference.baseUrl | quote }}
+  {{- else }}
+  OLLAMA_BASE_URL: "http://localhost:11434"
+  {{- end }}
+  MODEL_TIMEOUT_SECONDS: {{ .Values.inference.timeoutSeconds | quote }}
+  RETRIEVAL_MODE: {{ .Values.retrieval.mode | quote }}
+  NPPES_API_URL: {{ .Values.retrieval.nppes.url | quote }}
+  NPPES_TIMEOUT_SECONDS: {{ .Values.retrieval.nppes.timeoutSeconds | quote }}
+  PUBMED_API_URL: {{ .Values.retrieval.pubmed.url | quote }}
+  PUBMED_TIMEOUT_SECONDS: {{ .Values.retrieval.pubmed.timeoutSeconds | quote }}
+  CMS_API_URL: {{ .Values.retrieval.cms.url | quote }}
+  CMS_TIMEOUT_SECONDS: {{ .Values.retrieval.cms.timeoutSeconds | quote }}
+  MEDLINEPLUS_API_URL: {{ .Values.retrieval.medlineplus.apiUrl | quote }}
+  MEDLINEPLUS_CONNECT_URL: {{ .Values.retrieval.medlineplus.connectUrl | quote }}
+  MEDLINEPLUS_TIMEOUT_SECONDS: {{ .Values.retrieval.medlineplus.timeoutSeconds | quote }}
+  API_BASE_URL: "http://{{ include "open-healthcare.fullname" . }}-api:{{ .Values.api.service.port }}"
+  HEALTHCARE_AGENTS_API_URL: "http://{{ include "open-healthcare.fullname" . }}-api:{{ .Values.api.service.port }}"
+  {{- if eq .Values.observability.mode "bundled" }}
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://{{ include "open-healthcare.fullname" . }}-otel-collector:4318"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=kubernetes,service.namespace={{ .Release.Namespace }}"
+  {{- else if eq .Values.observability.mode "external" }}
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.externalOtlpEndpoint | default "http://otel-collector:4318" | quote }}
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=kubernetes,service.namespace={{ .Release.Namespace }}"
+  {{- else }}
+  OTEL_ENABLED: "false"
+  {{- end }}

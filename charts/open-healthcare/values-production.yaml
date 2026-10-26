@@ -1,0 +1,57 @@
+# Production Configuration Values
+# Uses published GHCR images, ClusterIP services with optional Ingress, and remote or in-cluster inference
+
+api:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/hastimal/open-healthcare-api
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+
+ui:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/hastimal/open-healthcare-ui
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8501
+
+# In production, use external inference endpoint (e.g. dedicated vLLM or remote Ollama cluster)
+inference:
+  mode: "external"
+  baseUrl: "http://inference-gateway.internal:11434"
+  localBridge:
+    enabled: false
+
+# Production ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: healthcare.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+        - path: /
+          pathType: Prefix
+          service: ui
+  tls:
+    - secretName: healthcare-tls
+      hosts:
+        - healthcare.example.com
+
+# Telemetry can point to external or bundled collector
+observability:
+  mode: "bundled"
+  grafana:
+    anonymousRole: "Viewer"
+
+secrets:
+  existingSecret: "healthcare-secrets"
+  createSecret: false
