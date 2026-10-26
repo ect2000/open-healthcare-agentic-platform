@@ -1,0 +1,44 @@
+================================================================================
+Open Healthcare Agentic Platform
+================================================================================
+
+Release Name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+1. Accessing Application Endpoints:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  - Web UI:  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/
+  - API:     http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/api/health
+{{- end }}
+{{- else if contains "NodePort" .Values.ui.service.type }}
+  - Web UI:  http://localhost:{{ .Values.ui.service.nodePort }}/
+  - API:     http://localhost:{{ .Values.api.service.nodePort }}/health
+{{- else }}
+  Forward ports to access locally:
+  - Web UI:
+    kubectl port-forward svc/{{ include "open-healthcare.fullname" . }}-ui 8501:8501 -n {{ .Release.Namespace }}
+  - API:
+    kubectl port-forward svc/{{ include "open-healthcare.fullname" . }}-api 8000:8000 -n {{ .Release.Namespace }}
+{{- end }}
+
+2. Inference Mode:
+  - Selected Mode: {{ .Values.inference.mode }}
+  - Model Name:    {{ .Values.inference.modelName }}
+{{- if eq .Values.inference.mode "local-ollama" }}
+  - Host Gateway:  {{ include "open-healthcare.fullname" . }}-ollama-bridge -> {{ .Values.inference.localBridge.hostTarget }}
+{{- else if .Values.inference.baseUrl }}
+  - Target URL:    {{ .Values.inference.baseUrl }}
+{{- end }}
+
+3. Observability & Telemetry:
+  - Mode: {{ .Values.observability.mode }}
+{{- if eq .Values.observability.mode "bundled" }}
+  - Grafana:
+    kubectl port-forward svc/{{ include "open-healthcare.fullname" . }}-grafana 3000:3000 -n {{ .Release.Namespace }}
+  - Prometheus:
+    kubectl port-forward svc/{{ include "open-healthcare.fullname" . }}-prometheus 9090:9090 -n {{ .Release.Namespace }}
+  - Tempo:
+    kubectl port-forward svc/{{ include "open-healthcare.fullname" . }}-tempo 3200:3200 -n {{ .Release.Namespace }}
+{{- end }}
+================================================================================

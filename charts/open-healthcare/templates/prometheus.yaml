@@ -1,0 +1,94 @@
+{{- if and (eq .Values.observability.mode "bundled") .Values.observability.prometheus.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-prometheus-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+
+    scrape_configs:
+      - job_name: "otel-collector"
+        static_configs:
+          - targets: ["{{ include "open-healthcare.fullname" . }}-otel-collector:8889"]
+
+      - job_name: "open-healthcare-api"
+        metrics_path: "/metrics"
+        static_configs:
+          - targets: ["{{ include "open-healthcare.fullname" . }}-api:{{ .Values.api.service.port }}"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "open-healthcare.name" . }}-prometheus
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "open-healthcare.name" . }}-prometheus
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: observability
+    spec:
+      containers:
+        - name: prometheus
+          image: "{{ .Values.observability.prometheus.image.repository }}:{{ .Values.observability.prometheus.image.tag }}"
+          imagePullPolicy: {{ .Values.observability.prometheus.image.pullPolicy }}
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.enable-lifecycle"
+          ports:
+            - name: http
+              containerPort: 9090
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/prometheus
+            - name: storage-volume
+              mountPath: /prometheus
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "open-healthcare.fullname" . }}-prometheus-config
+        - name: storage-volume
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+  selector:
+    app.kubernetes.io/name: {{ include "open-healthcare.name" . }}-prometheus
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

@@ -1,0 +1,12 @@
+# .helmignore
+.git/
+.gitignore
+.github/
+.dockerignore
+*.swp
+*.bak
+*.tmp
+*~
+.DS_Store
+.idea/
+.vscode/

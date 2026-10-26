@@ -1,0 +1,42 @@
+# Local Kind Development Values
+# Configures NodePort access and host-ollama-bridge to access native Ollama on macOS
+
+api:
+  image:
+    repository: open-healthcare-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    nodePort: 30080
+
+ui:
+  image:
+    repository: open-healthcare-ui
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    nodePort: 30851
+
+inference:
+  mode: "local-ollama"
+  localBridge:
+    enabled: true
+    hostTarget: "host.docker.internal:11434"
+
+observability:
+  mode: "bundled"
+  otelCollector:
+    enabled: true
+  prometheus:
+    enabled: true
+  tempo:
+    enabled: true
+  grafana:
+    enabled: true
+    anonymousRole: "Viewer"
+
+secrets:
+  existingSecret: "healthcare-secrets"
+  createSecret: false

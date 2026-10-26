@@ -1,0 +1,205 @@
+# Default values for open-healthcare Helm chart.
+# This is a YAML-formatted file.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Security Context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Application & Multi-Agent Backend Service (FastAPI)
+api:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/hastimal/open-healthcare-api
+    pullPolicy: IfNotPresent
+    tag: "" # Defaults to appVersion
+  service:
+    type: ClusterIP
+    port: 8000
+    nodePort: null
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1536Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Interactive Web Application Frontend (Streamlit)
+ui:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/hastimal/open-healthcare-ui
+    pullPolicy: IfNotPresent
+    tag: "" # Defaults to appVersion
+  service:
+    type: ClusterIP
+    port: 8501
+    nodePort: null
+  resources:
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+  livenessProbe:
+    httpGet:
+      path: /_stcore/health
+      port: 8501
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /_stcore/health
+      port: 8501
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Inference Configuration
+# Mode can be:
+# - "local-ollama" (Host Ollama via local bridge proxy)
+# - "external" (User-managed remote Ollama or OpenAI-compatible endpoint)
+# - "kubernetes" (In-cluster LLM service, e.g. vLLM or Kubernetes deployment)
+inference:
+  mode: "local-ollama"
+  modelProvider: "ollama"
+  modelName: "gemma4:e2b"
+  timeoutSeconds: 180
+  # For mode "external" or "kubernetes", set baseUrl explicitly:
+  baseUrl: ""
+  # Host bridge configuration for "local-ollama" mode:
+  localBridge:
+    enabled: true
+    image:
+      repository: nginx
+      tag: alpine
+      pullPolicy: IfNotPresent
+    hostTarget: "host.docker.internal:11434"
+    port: 11434
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+# Healthcare External Data Sources & Retrieval Configuration
+retrieval:
+  mode: "live"
+  nppes:
+    url: "https://npiregistry.cms.hhs.gov/api/"
+    timeoutSeconds: 15
+  pubmed:
+    url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+    timeoutSeconds: 15
+  cms:
+    url: "https://data.cms.gov/provider-data/api/1/"
+    timeoutSeconds: 20
+  medlineplus:
+    apiUrl: "https://wsearch.nlm.nih.gov/ws/query"
+    connectUrl: "https://connect.medlineplus.gov/service"
+    timeoutSeconds: 15
+
+# Observability Configuration
+# Mode can be:
+# - "bundled" (Deploy in-chart OTel Collector, Prometheus, Tempo, Grafana)
+# - "external" (Send telemetry to existing cluster collector or endpoints)
+# - "disabled" (Disable telemetry export)
+observability:
+  mode: "bundled"
+  otelCollector:
+    enabled: true
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: "0.96.0"
+      pullPolicy: IfNotPresent
+  prometheus:
+    enabled: true
+    image:
+      repository: prom/prometheus
+      tag: "v2.50.1"
+      pullPolicy: IfNotPresent
+  tempo:
+    enabled: true
+    image:
+      repository: grafana/tempo
+      tag: "2.4.0"
+      pullPolicy: IfNotPresent
+  grafana:
+    enabled: true
+    image:
+      repository: grafana/grafana
+      tag: "10.3.3"
+      pullPolicy: IfNotPresent
+    anonymousRole: "Viewer"
+
+# Existing Secret Integration
+# If existingSecret is specified, values from that secret will be mounted into containers
+secrets:
+  existingSecret: "healthcare-secrets"
+  createSecret: false
+  # If createSecret is true, these keys are created:
+  pubmedApiKey: ""
+  cmsApiKey: ""
+  grafanaAdminUser: "admin"
+  grafanaAdminPassword: ""
+
+# Ingress Configuration (Optional)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: healthcare.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+        - path: /
+          pathType: Prefix
+          service: ui
+  tls: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

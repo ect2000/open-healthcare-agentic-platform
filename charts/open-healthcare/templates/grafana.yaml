@@ -1,0 +1,171 @@
+{{- if and (eq .Values.observability.mode "bundled") .Values.observability.grafana.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-grafana-datasources
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://{{ include "open-healthcare.fullname" . }}-prometheus:9090
+        isDefault: true
+        editable: true
+
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://{{ include "open-healthcare.fullname" . }}-tempo:3200
+        isDefault: false
+        editable: true
+        jsonData:
+          httpMethod: GET
+          tracesToLogs:
+            datasourceUid: ""
+          serviceMap:
+            datasourceUid: "prometheus"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-grafana-dashboards-provider
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: "Healthcare Observability Dashboards"
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-grafana-dashboard-definitions
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+data:
+  healthcare_observability.json: |
+{{ .Files.Get "dashboards/healthcare_observability.json" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-grafana
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "open-healthcare.name" . }}-grafana
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "open-healthcare.name" . }}-grafana
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: observability
+    spec:
+      containers:
+        - name: grafana
+          image: "{{ .Values.observability.grafana.image.repository }}:{{ .Values.observability.grafana.image.tag }}"
+          imagePullPolicy: {{ .Values.observability.grafana.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              {{- if .Values.secrets.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: GRAFANA_ADMIN_USER
+                  optional: true
+              {{- else }}
+              value: "admin"
+              {{- end }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              {{- if .Values.secrets.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: GRAFANA_ADMIN_PASSWORD
+                  optional: true
+              {{- else }}
+              value: "admin"
+              {{- end }}
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: {{ .Values.observability.grafana.anonymousRole | default "Viewer" | quote }}
+          volumeMounts:
+            - name: datasources-volume
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-volume
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboard-definitions-volume
+              mountPath: /var/lib/grafana/dashboards
+            - name: storage-volume
+              mountPath: /var/lib/grafana
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: datasources-volume
+          configMap:
+            name: {{ include "open-healthcare.fullname" . }}-grafana-datasources
+        - name: dashboards-volume
+          configMap:
+            name: {{ include "open-healthcare.fullname" . }}-grafana-dashboards-provider
+        - name: dashboard-definitions-volume
+          configMap:
+            name: {{ include "open-healthcare.fullname" . }}-grafana-dashboard-definitions
+        - name: storage-volume
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "open-healthcare.fullname" . }}-grafana
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "open-healthcare.labels" . | nindent 4 }}
+    app.kubernetes.io/component: observability
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app.kubernetes.io/name: {{ include "open-healthcare.name" . }}-grafana
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
