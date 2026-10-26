@@ -1,0 +1,140 @@
+name: Multi-Arch Container Build & GHCR Pipeline
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "Dockerfile.api"
+      - "Dockerfile.ui"
+      - ".dockerignore"
+      - "pyproject.toml"
+      - "src/**"
+      - ".github/workflows/publish-containers.yml"
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish images to GHCR (true/false)"
+        required: true
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE_NAME: hastimal/open-healthcare-api
+  UI_IMAGE_NAME: hastimal/open-healthcare-ui
+
+jobs:
+  build-and-validate:
+    name: Build & Validate Multi-Arch Containers
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            file: Dockerfile.api
+            image: ghcr.io/hastimal/open-healthcare-api
+          - name: ui
+            file: Dockerfile.ui
+            image: ghcr.io/hastimal/open-healthcare-ui
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for Multi-Architecture Support
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine Publication Intent
+        id: prep
+        run: |
+          SHOULD_PUBLISH="false"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            SHOULD_PUBLISH="true"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" = "true" ]; then
+            SHOULD_PUBLISH="true"
+          fi
+          echo "should_publish=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
+          echo "Publication intent: $SHOULD_PUBLISH"
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        if: steps.prep.outputs.should_publish == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract OCI Metadata & Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=Open Healthcare Agentic Platform - ${{ matrix.name }}
+            org.opencontainers.image.description=Vendor-neutral, multi-agent healthcare intelligence platform (${{ matrix.name }})
+            org.opencontainers.image.vendor=hastimal
+            org.opencontainers.image.source=https://github.com/hastimal/open-healthcare-agentic-platform
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - name: Build and Push Multi-Arch Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: linux/amd64,linux/arm64
+          push: ${{ steps.prep.outputs.should_publish == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - name: Build Single-Arch Image for Local Vulnerability Scan
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ matrix.name }}-scan:local
+          cache-from: type=gha
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.name }}-scan:local
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Validate Container Startup Smoke Test
+        run: |
+          docker run --rm -d --name ${{ matrix.name }}-smoke -p 8080:8000 ${{ matrix.name }}-scan:local || \
+          docker run --rm -d --name ${{ matrix.name }}-smoke -p 8080:8501 ${{ matrix.name }}-scan:local
+          sleep 4
+          docker ps --filter name=${{ matrix.name }}-smoke --format "{{.Status}}"
+          docker logs ${{ matrix.name }}-smoke
+          docker stop ${{ matrix.name }}-smoke
