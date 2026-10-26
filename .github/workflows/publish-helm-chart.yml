@@ -1,0 +1,130 @@
+name: Helm OCI Packaging & GHCR Publishing Pipeline
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "charts/**"
+      - ".github/workflows/publish-helm-chart.yml"
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish chart to GHCR OCI Registry (true/false)"
+        required: true
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  OCI_REGISTRY: ghcr.io
+  OCI_REPO: ghcr.io/hastimal/charts
+  CHART_DIR: charts/open-healthcare
+
+jobs:
+  validate-and-package:
+    name: Lint, Template & Package Helm Chart
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Lint Helm Chart
+        run: |
+          echo "==> Running helm lint..."
+          helm lint ${{ env.CHART_DIR }} --strict
+
+      - name: Validate Helm Chart Templates
+        run: |
+          echo "==> Rendering default values..."
+          helm template open-healthcare ${{ env.CHART_DIR }} > /tmp/rendered-default.yaml
+          
+          echo "==> Rendering with custom values & full observability..."
+          helm template open-healthcare ${{ env.CHART_DIR }} \
+            --set observability.enabled=true \
+            --set ingress.enabled=true > /tmp/rendered-obs.yaml
+
+      - name: Validate Chart SemVer & Metadata
+        run: |
+          CHART_VERSION=$(helm show chart ${{ env.CHART_DIR }} | grep '^version:' | awk '{print $2}')
+          APP_VERSION=$(helm show chart ${{ env.CHART_DIR }} | grep '^appVersion:' | awk '{print $2}' | tr -d '"')
+          echo "Discovered Chart Version: $CHART_VERSION"
+          echo "Discovered App Version:   $APP_VERSION"
+
+          if [ -z "$CHART_VERSION" ]; then
+            echo "❌ Error: Chart version is missing in Chart.yaml"
+            exit 1
+          fi
+          if [ -z "$APP_VERSION" ]; then
+            echo "❌ Error: App version is missing in Chart.yaml"
+            exit 1
+          fi
+
+      - name: Package Helm Chart
+        id: package
+        run: |
+          mkdir -p dist/charts
+          helm package ${{ env.CHART_DIR }} -d dist/charts
+          PACKAGE_FILE=$(ls dist/charts/*.tgz)
+          echo "package_file=$PACKAGE_FILE" >> $GITHUB_OUTPUT
+          echo "Packaged: $PACKAGE_FILE"
+
+      - name: Determine Publication Intent
+        id: prep
+        run: |
+          SHOULD_PUBLISH="false"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+            CHART_VERSION=$(helm show chart ${{ env.CHART_DIR }} | grep '^version:' | awk '{print $2}')
+            # Clean possible 'v' prefix from tag for comparison
+            CLEAN_TAG="${RELEASE_TAG#v}"
+            # Extract SemVer portion if tag is e.g. v0.10.0-m10
+            TAG_SEMVER=$(echo "$CLEAN_TAG" | awk -F'-' '{print $1}')
+
+            echo "Evaluating Release Tag: $RELEASE_TAG (Cleaned: $CLEAN_TAG, SemVer: $TAG_SEMVER) against Chart Version: $CHART_VERSION"
+            if [ "$CLEAN_TAG" != "$CHART_VERSION" ] && [ "$TAG_SEMVER" != "$CHART_VERSION" ]; then
+              echo "❌ Error: Release tag ($RELEASE_TAG) does not align with Chart.yaml version ($CHART_VERSION)"
+              exit 1
+            fi
+            SHOULD_PUBLISH="true"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" = "true" ]; then
+            SHOULD_PUBLISH="true"
+          fi
+          echo "should_publish=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
+          echo "Publication intent: $SHOULD_PUBLISH"
+
+      - name: Log in to GHCR OCI Registry
+        if: steps.prep.outputs.should_publish == 'true'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.OCI_REGISTRY }} \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Push Chart to GHCR OCI Registry
+        if: steps.prep.outputs.should_publish == 'true'
+        run: |
+          PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
+          echo "==> Pushing $PACKAGE_FILE to oci://${{ env.OCI_REPO }}..."
+          helm push "$PACKAGE_FILE" "oci://${{ env.OCI_REPO }}"
+
+      - name: Verify OCI Artifact (Post-Publish Verification)
+        if: steps.prep.outputs.should_publish == 'true'
+        run: |
+          CHART_VERSION=$(helm show chart ${{ env.CHART_DIR }} | grep '^version:' | awk '{print $2}')
+          echo "==> Verifying OCI pull for open-healthcare:$CHART_VERSION..."
+          mkdir -p /tmp/oci-verify
+          helm pull "oci://${{ env.OCI_REPO }}/open-healthcare" \
+            --version "$CHART_VERSION" \
+            -d /tmp/oci-verify
+          ls -lh /tmp/oci-verify/open-healthcare-*.tgz
+          echo "✅ OCI artifact verified successfully."
