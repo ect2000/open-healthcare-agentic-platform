@@ -86,11 +86,10 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=raw,value=0.10.0,enable=${{ startsWith(github.ref, 'refs/tags/v0.10.0') }}
-            type=raw,value=0.10,enable=${{ startsWith(github.ref, 'refs/tags/v0.10.0') }}
+            type=match,pattern=v(.*)-.*,group=1
+            type=match,pattern=v(\d+\.\d+)\..*,group=1
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=match,pattern=v(.*)-.*,group=1
             type=sha,format=short
           labels: |
             org.opencontainers.image.title=Open Healthcare Agentic Platform - ${{ matrix.name }}
