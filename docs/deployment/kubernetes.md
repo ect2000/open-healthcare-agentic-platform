@@ -6,9 +6,9 @@ This guide documents the architecture, local cluster setup, deployment lifecycle
 
 ## 1. Architecture Overview
 
-The Kubernetes deployment provides a declarative, vendor-neutral infrastructure stack managed via **Kustomize** under [`deploy/kubernetes/`](file:///Users/hastimal.jangid/Desktop/hmeb/GitHub/open-healthcare-agentic-platform/deploy/kubernetes/).
+The Kubernetes deployment provides a declarative, vendor-neutral infrastructure stack managed via **Kustomize** under [`deploy/kubernetes/`](../../deploy/kubernetes/).
 
-![Kubernetes Architecture Diagram](file:///Users/hastimal.jangid/Desktop/hmeb/GitHub/open-healthcare-agentic-platform/docs/images/m09_kubernetes_architecture.png)
+![Kubernetes Architecture Diagram](../images/m09_kubernetes_architecture.png)
 
 ### Key Workloads & Components
 
@@ -53,8 +53,8 @@ Milestone M9 deploys a complete CNCF observability stack directly in namespace `
 - **Metrics:** `HealthcareMetrics` export to `otel-collector`, which exposes a Prometheus scrape endpoint on port `8889`. Prometheus scrapes this every 2 seconds.
 - **Dashboards:** Grafana pre-provisions datasources (Prometheus & Tempo) and the platform dashboard from `deploy/kubernetes/base/observability/grafana.yaml`.
 
-![Grafana Dashboards](file:///Users/hastimal.jangid/Desktop/hmeb/GitHub/open-healthcare-agentic-platform/docs/images/m09_kubernetes_grafana.png)
-![Tempo Distributed Tracing](file:///Users/hastimal.jangid/Desktop/hmeb/GitHub/open-healthcare-agentic-platform/docs/images/m09_kubernetes_tempo.png)
+![Grafana Dashboards](../images/m09_kubernetes_grafana.png)
+![Tempo Distributed Tracing](../images/m09_kubernetes_tempo.png)
 
 ---
 
@@ -78,7 +78,7 @@ kubectl get nodes -o wide
 kubectl get pods -n open-healthcare -o wide
 kubectl get svc -n open-healthcare
 ```
-![Kubernetes Workloads Status](file:///Users/hastimal.jangid/Desktop/hmeb/GitHub/open-healthcare-agentic-platform/docs/images/m09_kubernetes_workloads.png)
+![Kubernetes Workloads Status](../images/m09_kubernetes_workloads.png)
 
 ### 3. Automated Smoke Tests
 ```bash
