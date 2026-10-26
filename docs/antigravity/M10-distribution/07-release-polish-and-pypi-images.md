@@ -41,6 +41,7 @@ Post-release audit and user testing identified two non-functional polish issues 
 - **Root Cause:** In earlier milestones (M6), `src/healthcare_agents/__init__.py` declared `__version__ = "0.6.0"`. `healthcare_agents.cli:build_parser` called:
   ```python
   from healthcare_agents import __version__
+
   parser.add_argument("--version", action="version", version=f"healthcare-agents {__version__}")
   ```
   While `pyproject.toml` was properly bumped to `0.10.0` in M10, `__init__.py` retained the hardcoded `0.6.0`.
