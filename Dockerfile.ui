@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy packaging specifications
 COPY pyproject.toml README.md LICENSE /build/
+COPY docs/ /build/docs/
 COPY src/ /build/src/
 
 # Build wheels

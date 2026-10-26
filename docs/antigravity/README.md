@@ -24,6 +24,7 @@ This directory maintains the historical documentation, execution records, implem
 | [M09-kubernetes](./M09-kubernetes/) | `v0.9.0-m09` | Kubernetes-Native Deployment, Kustomize, Kind Cluster & Observability | Complete |
 | [M10-distribution](./M10-distribution/) | `v0.10.0-m10` | Helm, Packaging & One-Command Distribution (GHCR, Helm, PyPI CLI) | Complete |
 | [M10.1-release-polish](./M10-distribution/07-release-polish-and-pypi-images.md) | `v0.10.1-m10.1` | PyPI README Images Fix, CLI Version Correction & Release Polish | Complete |
+| [M10.2-documentation](./M10.2-documentation/11-final-acceptance.md) | `docs/m10-2-cncf-documentation-overhaul` | CNCF-Ready Documentation, Developer Experience & Final Quality Audit | Complete |
 
 ---
 

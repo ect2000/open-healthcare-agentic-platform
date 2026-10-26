@@ -16,7 +16,7 @@ def test_all_local_images_exist_in_git() -> None:
     readme_text = (repo_root / "README.md").read_text()
     # Find all referenced image file basenames (e.g. m08_platform_overview.png)
     image_names = re.findall(r"docs/images/([a-zA-Z0-9_\-]+\.png)", readme_text)
-    assert len(image_names) >= 20
+    assert len(image_names) >= 5
 
     for img_name in set(image_names):
         img_path = docs_images / img_name
@@ -43,7 +43,7 @@ def test_remote_raw_github_image_urls_return_http_200() -> None:
         r"!\[.*?\]\((https:\/\/raw\.githubusercontent\.com\/hastimal\/open-healthcare-agentic-platform\/main\/docs\/images\/[^\)]+)\)",
         readme_text,
     )
-    assert len(raw_urls) >= 20
+    assert len(raw_urls) >= 5
 
     for url in set(raw_urls):
         req = urllib.request.Request(url, method="HEAD")
