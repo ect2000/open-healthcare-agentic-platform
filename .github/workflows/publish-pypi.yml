@@ -1,0 +1,64 @@
+name: Publish Python Package to PyPI
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to PyPI (true/false)"
+        required: true
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-publish:
+    name: Build & Publish to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/open-healthcare-agentic-platform
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Build Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build Wheel & Source Distribution
+        run: |
+          python -m build
+          twine check dist/*
+
+      - name: Determine Publication Intent
+        id: prep
+        run: |
+          SHOULD_PUBLISH="false"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            SHOULD_PUBLISH="true"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" = "true" ]; then
+            SHOULD_PUBLISH="true"
+          fi
+          echo "should_publish=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
+          echo "Publication intent: $SHOULD_PUBLISH"
+
+      - name: Publish Package to PyPI (Trusted Publishing via OIDC)
+        if: steps.prep.outputs.should_publish == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          skip-existing: true
+          print-hash: true
