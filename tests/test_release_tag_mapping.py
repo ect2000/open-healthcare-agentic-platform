@@ -29,11 +29,11 @@ def test_chart_and_package_version_alignment() -> None:
     repo_root = pathlib.Path(__file__).parent.parent
 
     pyproject_text = (repo_root / "pyproject.toml").read_text()
-    assert 'version = "0.10.0"' in pyproject_text
+    assert 'version = "0.10.1"' in pyproject_text
 
     chart_text = (repo_root / "charts" / "open-healthcare" / "Chart.yaml").read_text()
-    assert "version: 0.10.0" in chart_text
-    assert 'appVersion: "0.10.0"' in chart_text
+    assert "version: 0.10.1" in chart_text
+    assert 'appVersion: "0.10.1"' in chart_text
 
 
 def test_helm_image_references_match_ghcr() -> None:
